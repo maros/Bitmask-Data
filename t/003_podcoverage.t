@@ -7,5 +7,5 @@ eval "use Test::Pod::Coverage";
 plan skip_all => "Test::Pod::Coverage required for testing POD coverage" if $@;
 
 pod_coverage_ok( 
-    "DBIx::Class::VirtualColumns", 
+    "Bitmask::Data", 
     "POD is covered" );

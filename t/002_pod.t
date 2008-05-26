@@ -4,4 +4,4 @@
 
 use Test::Pod tests => 1;
 
-pod_file_ok( "lib/DBIx/Class/VirtualColumns.pm", "Valid POD file" );
+pod_file_ok( "lib/Bitmask/Data.pm", "Valid POD file" );

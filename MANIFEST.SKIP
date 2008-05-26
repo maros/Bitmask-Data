@@ -1,6 +1,6 @@
 # Module Specific Stuff
 meta/*
-Bitmask-Data-L10N-*
+Bitmask-Data-*.*.tar.gz
 
 # Eclipse stuff
 .includepath
