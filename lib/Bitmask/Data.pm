@@ -153,15 +153,18 @@ sub _check_bit {
     
     return 1 if $bit == 0;
     
-    my $value = log($bit)/log(2);
+    # Check it it is a power of 2 or complex
+    return 0 
+        if !$class->bitmask_complex && $bit & ($bit - 1);
     
+    # Get bit length
+    my $value = int(log($bit)/log(2));
+    
+    # Reject too long values
     return 0 
         if ($value >= $class->bitmask_length);
-        
-    return 1 
-        if ($class->bitmask_complex);
          
-    return (int $value == $value) ? 1:0;
+    return 1;
 }
 
 
@@ -208,8 +211,17 @@ Returns all the value for the given bitmask.
 sub bm2data {
     my ( $class, $bitmask ) = @_;
 
+    die "Invalid bitmask value <$bitmask>"
+        if ($bitmask > (2 ** $class->bitmask_length) - 1);
+    
     my @result;
     my $items = $class->bitmask_items;
+    
+    my $check = 0;
+    $check = $_ | $check foreach (values %{$items});
+    die "Invalid bitmask items <$bitmask>"
+        if ($bitmask &  ~ $check);
+    
     unless ($class->bitmask_complex) {
         @result = grep { $items->{$_} & $bitmask } keys %{ $items };
     } else {
@@ -243,18 +255,15 @@ sub any2data {
         when (%{ $class->bitmask_items }) {
             @data = ($any);
         }
-        when (/\A(?:0b)?([01]{$bl})\Z/) {
+        when (m/\A0[bB]([01]{$bl})\Z/) {
             @data = ( $class->bm2data( oct("0b$1") ) );
-            die "Invalid bitmask <$any>"
-                unless (scalar @data);
         }
-        when (/\A\d+\Z/) {
-            #say("<$any> is an int: ");
+        when (m/\A\d+\Z/) {
             @data = ( $class->bm2data($any) );
-            die "Invalid integer value <$any>"
-                unless (scalar @data);
         }
-        default { die "Could not turn <$any> in anything meaningfull" };
+        default { 
+            die "Could not turn <$any> in anything meaningfull" 
+        };
     }
 
     return @data;
@@ -303,7 +312,7 @@ sub _parse_params {
     my $bm = MyBitmask->new();
     my $bm = MyBitmask->new('value1');
     my $bm = MyBitmask->new('value2', 'value3');
-    my $bm = MyBitmask->new('00010000010000');
+    my $bm = MyBitmask->new('0b00010000010000');
     my $bm = MyBitmask->new(124);
     my $bm = MyBitmask->new(0b00010000010000);
     my $bm = MyBitmask->new(0x2);
@@ -318,7 +327,7 @@ bits, bitmasks and values, even mix different types.
 
 =item * LIST or ARRAYREF of bits (integers)
 
-=item * LIST or ARRAYREF of strings representing bits or bitmasks
+=item * LIST or ARRAYREF of strings representing bits or bitmasks (starting with '0b')
 
 =item * LIST or ARRAYREF of bitmasks
 

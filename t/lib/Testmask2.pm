@@ -6,7 +6,7 @@ use base qw(Bitmask::Data);
 
 __PACKAGE__->bitmask_length(14);
 __PACKAGE__->bitmask_complex(1);
-__PACKAGE__->bitmask_default(0b1000000_0000000);
+#__PACKAGE__->bitmask_default(0b1000000_0000000);
 
 __PACKAGE__->init(
     de_AT   => 0b0000001_0000001,
