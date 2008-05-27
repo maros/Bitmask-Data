@@ -50,7 +50,7 @@ is($sqlsearch[0],"bitand( field, B'1000000000001000' )");
 is(${$sqlsearch[1]}," = B'1000000000001000'");
 ok($tm->reset);
 is($tm->length,0);
-ok($tm->add(0b1111111111111111));
+ok($tm->add(0b1000000000111111));
 is($tm->length,7);
 is($tm->mask,0b1000000000111111);
 ok($tm->remove(32768,[ 0b0000000000000101 ]));

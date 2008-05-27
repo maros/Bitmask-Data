@@ -1,0 +1,303 @@
+NAME
+    Bitmask::Data - Handle bitmasks in an easy and flexible way
+
+SYNOPSIS
+     # Create a simple bitmask class
+     packacke MyBitmask;
+     use base qw(Bitmask::Data);
+     __PACKAGE__->bitmask_length(20);
+     __PACKAGE__->bitmask_default(0b000000000000000011);
+     __PACKAGE__->init(
+        'value1' => 0b000000000000000001,
+        'value2' => 0x2,
+        'value2' => 4,
+        'value4',
+        'value5',
+     );
+     
+ ## Somewhere else in your code
+     use MyBitmask;
+     my $bm = MyBitmask->new('value1','value3');
+     $bm->mask;
+
+DESCRIPTION
+    This package helps you dealing with bitmasks. First you need to subclass
+    Bitmask::Data and set the bitmask values and length. (If you are only
+    working with a single bitmask in a simple application you might also
+    initialize the bitmask directly in the Bitmask::Data module).
+
+    After the initialization you can create an arbitrary number of bitmask
+    objects which can be accessed and manipulated with convenient methods.
+
+METHODS
+  Class Methods
+   bitmask_length
+    Set/Get the length of the bitmask. Changing this value after the
+    initialization is not recommended.
+
+    Default: 16
+
+   bitmask_default
+    Set/Get the default bitmask for empty Bitmask::Data objects.
+
+    Default: undef
+
+   bitmask_complex
+    Boolean value that enables/disables checks for composed bitmasks. If
+    false init will only accept bits that are powers of 2.
+
+    Default: 0
+
+   bitmask_items
+    HASHREF of all bitmask items. Don't mess around here unless you know
+    what you are doing.
+
+   init
+        CLASS->init(LIST of VALUES);
+
+    Initializes the bitmask class. You can supply a list of possible values.
+    Optionally you can also specify the bits for the mask by adding bit
+    values after the value.
+
+        CLASS->init(
+            'value1'
+            'value2' => 0x2 ,
+            'value3',
+            'value4' => 16,
+            'value5' => 0b100000,
+        );
+
+   data2bit
+        CLASS->data2bit(VALUE);
+
+    Returns the corresponding bit for the given value.
+
+   bit2data
+        CLASS->bit2data(BIT);
+
+    Returns the corresponding value for the given bit.
+
+   bm2data
+        CLASS->bm2data(BITMASK);
+
+    Returns all the value for the given bitmask.
+
+   any2data
+        CLASS->any2data(124);
+        CLASS->any2data('de_DE');
+        CLASS->any2data(0b110001001);
+
+    Turns a single value (bit, bitmask,value) into a value.
+
+   _parse_params
+        CLASS->_parse_params(LIST)
+
+    Helper method for parsing params passed to various methods.
+
+   Public Methods
+   new
+        my $bm = MyBitmask->new();
+        my $bm = MyBitmask->new('value1');
+        my $bm = MyBitmask->new('value2', 'value3');
+        my $bm = MyBitmask->new('0b00010000010000');
+        my $bm = MyBitmask->new(124);
+        my $bm = MyBitmask->new(0b00010000010000);
+        my $bm = MyBitmask->new(0x2);
+        my $bm = MyBitmask->new([32, 'value1', 0b00010000010000]);
+
+    Create a new bitmask object. You can supply almost any combination of
+    bits, bitmasks and values, even mix different types.
+
+    *   LIST or ARRAYREF of values
+
+    *   LIST or ARRAYREF of bits (integers)
+
+    *   LIST or ARRAYREF of strings representing bits or bitmasks (starting
+        with '0b')
+
+    *   LIST or ARRAYREF of bitmasks
+
+    *   Any combination of the above
+
+   set
+        $bm->set(ITEMS);
+
+    This method takes the same arguments as "new". It resets the current
+    bitmask and sets the supplied arguments.
+
+   list
+        $bm->list
+
+    In list context, this returns a list of the set values in scalar
+    context, this returns an array reference to the list of values.
+
+   length
+        $bm->length
+
+    Number of set bitmask values.
+
+   first
+        $bm->first
+
+    Returns the first set value (the order of the values is determied by the
+    sequence of the addition)
+
+   remove
+        $bm->remove(ITEMS);
+
+    This method takes the same arguments as "new". The values supplied in
+    the arguments will be unset.
+
+   reset
+        $bm->reset();
+
+    Unsets all values, leaving an empty list.
+
+   add
+        $bm->add(ITEMS);
+
+    This method takes the same arguments as "new". The specified values will
+    be set.
+
+   mask
+        $bm->mask();
+
+    Returns the integer representing the bitmask of all the set values.
+
+   string
+        $bm->string();
+
+    Retuns the string representing the bitmask.
+
+   sqlfilter
+        $bm->sqlfilter($field);
+
+    This method can be used for database searches in conjunction with
+    SQL::Abstract an POSTGRESQL (SQL::Abstract is used by "DBIx::Class" for
+    generating searches). The search will find all database rows with
+    bitmask that have at least the given values set. (use the "sql" method
+    for an exact match)
+
+    Example how to use sqlfilter with SQL::Abstract:
+
+        my($stmt, @bind) = $sql->select(
+            'mytable', 
+            \@fields,
+            {
+                $bm->sqlfilter('mytable.bitmaskfield'),
+            }
+        );
+
+    Example how to use sqlfilter with DBIx::Class:
+
+        my $list = $resultset->search(
+            { 
+                $bm->sqlfilter('me.bitmaskfield'), 
+            },
+        );
+
+   hasall
+        $bm->hasall(ITEMS);
+
+    This method takes the same arguments as "new". Checks if all requestes
+    items are set and returns true or false.
+
+   hasexact
+        $bm->hasexact(ITEMS);
+
+    This method takes the same arguments as "new". Checks if the requestes
+    items exactly match the set values.
+
+   hasany
+        $bm->hasany(ITEMS);
+
+    This method takes the same arguments as "new". Checks if at least one
+    set value matches the supplied value list and returns true or false
+
+CAVEATS
+    Since Bitmask::Data is very liberal with input data you cannot use
+    numbers as bitmask values.
+
+SUBCLASSING
+    Bitmask::Data was designed to be subclassed.
+
+        package MyBitmask;
+        use base qw(Bitmask::Data);
+        __PACKAGE__->bitmask_length(20); # Default length is 16
+        __PACKAGE__->init(
+            'value1' => 0b000000000000000001,
+            'value2' => 0x2,
+            'value2' => 4,
+            'value4',
+            'value5',
+        );
+
+WORKING WITH DATABASES
+    This module comes with support for POSTGRESQL databases (patches for
+    other database vendors are welcome).
+
+    First you need to create the correct column types:
+
+        CREATE TABLE bitmaskexample ( 
+            id integer DEFAULT nextval('pkey_seq'::regclass) NOT NULL,
+            bitmask bit(14),
+            otherfields character varying
+        );
+
+    The length of the bitmask field must match "CLAS->bitmask_length".
+
+    This module provides two convenient methods to work with databases:
+
+    *   sqlfilter: Search which have the current values set
+
+    *   string: Print the bitmask string as used by the database
+
+    If you are working with DBIx::Class you might also install de- and
+    inflators for Bitmask objects:
+
+        __PACKAGE__->inflate_column('fialname',{
+            inflate => sub {
+                my $value = shift;
+                return MyBitmask->new($value);
+            },
+            deflate => sub {
+                my $value = shift;
+                undef $value 
+                    unless ref($value) && $value->isa('MyBitmask');
+                $value //= MyBitmask->new();
+                return $value->string;
+            },
+        });
+
+SUPPORT
+    Please report any bugs or feature requests to
+    "bug-bitmask-data@rt.cpan.org", or through the web interface at
+    <http://rt.cpan.org/Public/Bug/Report.html?Queue=Bitmask::Data>. I will
+    be notified and then you'll automatically be notified of the progress on
+    your report as I make changes.
+
+AUTHOR
+        Klaus Ita
+        koki [at] worstofall.com
+
+        Maroš Kollár
+        CPAN ID: MAROS
+        maros [at] k-1.com
+        
+    L<http://www.revdev.at>
+
+ACKNOWLEDGEMENTS
+    This module was originally written by Klaus Ita (Koki) for Revdev
+    <http://www.revdev.at>, a nice litte software company I (Maros) run with
+    Koki and Domm (<http://search.cpan.org/~domm/>).
+
+COPYRIGHT
+    Bitmask::Data is Copyright (c) 2008 Klaus Ita, Maroš Kollár -
+    <http://www.revdev.at>
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    The full text of the license can be found in the LICENSE file included
+    with this module.
+
