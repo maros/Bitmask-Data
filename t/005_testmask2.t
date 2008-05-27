@@ -1,6 +1,6 @@
 # -*- perl -*-
 
-# t/004_basic.t - check basic stuff
+# t/005_testmask2.t - check testmask 2
 
 use Test::More tests => 62;
 

@@ -5,6 +5,7 @@ use warnings;
 
 use base qw(Bitmask::Data);
 
+__PACKAGE__->bitmask_lazyinit(1);
 __PACKAGE__->init(
     'value1', #1
     'value2' => 0b0000000000000010, #2

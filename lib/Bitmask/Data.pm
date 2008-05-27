@@ -18,10 +18,11 @@ use overload
         shift->mask,
     };
 
-__PACKAGE__->mk_classdata(bitmask_length => 16);
-__PACKAGE__->mk_classdata(bitmask_items  => {});
-__PACKAGE__->mk_classdata(bitmask_default=> undef);
-__PACKAGE__->mk_classdata(bitmask_complex=> 0);
+__PACKAGE__->mk_classdata(bitmask_length    => 16);
+__PACKAGE__->mk_classdata(bitmask_items     => {});
+__PACKAGE__->mk_classdata(bitmask_default   => undef);
+__PACKAGE__->mk_classdata(bitmask_complex   => 0);
+__PACKAGE__->mk_classdata(bitmask_lazyinit  => 0);
 
 =encoding utf8
 
@@ -34,14 +35,15 @@ Bitmask::Data - Handle bitmasks in an easy and flexible way
  # Create a simple bitmask class
  packacke MyBitmask;
  use base qw(Bitmask::Data);
- __PACKAGE__->bitmask_length(20);
+ __PACKAGE__->bitmask_length(18);
  __PACKAGE__->bitmask_default(0b000000000000000011);
  __PACKAGE__->init(
     'value1' => 0b000000000000000001,
-    'value2' => 0x2,
-    'value2' => 4,
-    'value4',
-    'value5',
+    'value2' => 0b000000000000000010,
+    'value2' => 0b000000000000000100,
+    'value4' => 0b000000000000001000,
+    'value5' => 0b000000000000010000,
+    ...
  );
  
  ## Somewhere else in your code
@@ -83,6 +85,12 @@ init will only accept bits that are powers of 2.
 
 Default: 0
 
+=head3 bitmask_lazyinit
+
+Boolean value that enables/disables warnings for lazy initialization.
+
+Default: 0
+
 =head3 bitmask_items
 
 HASHREF of all bitmask items. Don't mess around here unless you know 
@@ -114,19 +122,23 @@ sub init {
     croak('Bitmask length not set')
          unless $length;
 
-    croak('Too many values in bitmask: max.'.$class->bitmask_length)
-        if (scalar(@_) > $length);
-    
     my $items = {};
     my $count = 0;
     while (my $name = shift) {
         my $bit;
         
+        $count ++;
+        
+        croak('Too many values in bitmask: max '.$class->bitmask_length)
+            if $count > $class->bitmask_length;
+        
         if ($_[0] =~ m/^\d+$/
             || $_[0] =~ m/\A(?:0b)?([01]{$length})\Z/) {
             $bit = shift;
         } else {
-            $bit =  2 ** $count;
+            carp('Lazy bitmask initialization detected: Please enable <bitmask_lazyinit> or change init parameters')
+                unless ($class->bitmask_lazyinit);
+            $bit =  2 ** ($count-1);
         }
         
         $class->_check_bit($bit)
@@ -140,7 +152,7 @@ sub init {
         
         $items->{$name} = $bit;
         
-        $count ++;
+
     }
     
     $class->bitmask_items($items);
@@ -451,6 +463,20 @@ sub reset {
     my ( $self ) = @_;
     $self->{_data} = [];
 }
+
+=head3 setall
+
+    $bm->setall();
+
+Sets all values.
+
+=cut
+
+sub setall {
+    my ( $self ) = @_;
+    $self->{_data} = [ keys %{$self->bitmask_items} ];
+}
+
 
 =head3 add
 

@@ -1,6 +1,6 @@
 # -*- perl -*-
 
-# t/004_basic.t - check basic stuff
+# t/004_testmask1.t - check testmask 1
 
 use Test::More tests=>43;
 
