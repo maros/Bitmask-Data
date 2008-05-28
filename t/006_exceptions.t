@@ -2,7 +2,7 @@
 
 # t/004_basic.t - check basic stuff
 
-use Test::More tests=>6;
+use Test::More tests=>13;
 
 use strict;
 use warnings;
@@ -30,3 +30,79 @@ while (scalar @broken_input ) {
     };
     like($@,$error);
 }
+
+push @Testmask4::ISA,qw(Bitmask::Data);
+
+Testmask4->bitmask_length(undef);
+eval {
+    Testmask4->init(
+        'hase',
+        'baer',
+        'luchs'
+    );
+};
+like($@,qr/Bitmask length not set/);
+
+Testmask4->bitmask_length(4);
+eval {
+    Testmask4->init(
+        'hase',
+        'baer',
+        'luchs',
+        'sackratte',
+        'maus'
+    );
+};
+like($@,qr/Too many values in bitmask: max/);
+
+Testmask4->bitmask_items({});
+eval {
+    Testmask4->init(
+        'hase',
+        'baer',
+        'baer',
+        'luchs',
+    );
+};
+like($@,qr/Value already in bitmask/);
+
+Testmask4->bitmask_items({});
+eval {
+    Testmask4->init(
+        'hase'      => 1,
+        'baer'      => 2,
+        'luchs'     => 4,
+        'sackratte' => 4,
+    );
+};
+like($@,qr/Bit already in bitmask/);
+
+
+Testmask4->bitmask_items({});
+eval {
+    Testmask4->init(
+        'hase'      => 1,
+        'baer'      => 2,
+        'luchs'     => 3,
+        'sackratte' => 8,
+    );
+};
+like($@,qr/Invalid bit value/);
+
+
+Testmask4->bitmask_items({});
+eval {
+    Testmask4->new();
+};
+like($@,qr/Bitmask not initialized/);
+
+Testmask4->bitmask_items({});
+eval {
+    Testmask4->init(
+        'hase'      => '0b0001',
+        'baer'      => 2,
+        'luchs'     => 4,
+        'sackratte' => 16,
+    );
+};
+like($@,qr/Invalid bit value/);

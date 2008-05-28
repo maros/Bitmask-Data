@@ -2,7 +2,7 @@
 
 # t/004_testmask1.t - check testmask 1
 
-use Test::More tests=>43;
+use Test::More tests=>49;
 
 use strict;
 use warnings;
@@ -56,3 +56,13 @@ is($tm->mask,0b1000000000111111);
 ok($tm->remove(32768,[ 0b0000000000000101 ]));
 is($tm->length,4);
 is($tm->mask,0b0000000000111010);
+$tm->set([0b0000000000000010],[0b0000000000100010]);
+is($tm->mask,0b0000000000100010);
+$tm->add($tm2);
+ok($tm->hasany('value4'));
+
+# Utility functions
+is(Testmask1->bit2data(0b0000000000000010),'value2');
+is(Testmask1->bit2data(0b0100000000000000),undef);
+is(Testmask1->data2bit('value2'),0b0000000000000010);
+is(Testmask1->data2bit('novalue'),undef);

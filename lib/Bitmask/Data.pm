@@ -383,6 +383,7 @@ and sets the supplied arguments.
 sub set {
     my ($self, @args) = @_;
     
+    $self->{_data} = [];
     $self->add( $self->_parse_params(@args) );
     
     $self->{_data} = [ $self->bit2data($self->bitmask_default) ]
