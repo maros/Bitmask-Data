@@ -5,14 +5,15 @@ SYNOPSIS
      # Create a simple bitmask class
      packacke MyBitmask;
      use base qw(Bitmask::Data);
-     __PACKAGE__->bitmask_length(20);
+     __PACKAGE__->bitmask_length(18);
      __PACKAGE__->bitmask_default(0b000000000000000011);
      __PACKAGE__->init(
         'value1' => 0b000000000000000001,
-        'value2' => 0x2,
-        'value2' => 4,
-        'value4',
-        'value5',
+        'value2' => 0b000000000000000010,
+        'value2' => 0b000000000000000100,
+        'value4' => 0b000000000000001000,
+        'value5' => 0b000000000000010000,
+        ...
      );
      
  ## Somewhere else in your code
@@ -45,6 +46,11 @@ METHODS
    bitmask_complex
     Boolean value that enables/disables checks for composed bitmasks. If
     false init will only accept bits that are powers of 2.
+
+    Default: 0
+
+   bitmask_lazyinit
+    Boolean value that enables/disables warnings for lazy initialization.
 
     Default: 0
 
@@ -152,6 +158,11 @@ METHODS
         $bm->reset();
 
     Unsets all values, leaving an empty list.
+
+   setall
+        $bm->setall();
+
+    Sets all values.
 
    add
         $bm->add(ITEMS);
