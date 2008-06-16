@@ -5,14 +5,15 @@ SYNOPSIS
      # Create a simple bitmask class
      packacke MyBitmask;
      use base qw(Bitmask::Data);
-     __PACKAGE__->bitmask_length(20);
+     __PACKAGE__->bitmask_length(18);
      __PACKAGE__->bitmask_default(0b000000000000000011);
      __PACKAGE__->init(
         'value1' => 0b000000000000000001,
-        'value2' => 0x2,
-        'value2' => 4,
-        'value4',
-        'value5',
+        'value2' => 0b000000000000000010,
+        'value2' => 0b000000000000000100,
+        'value4' => 0b000000000000001000,
+        'value5' => 0b000000000000010000,
+        ...
      );
      
  ## Somewhere else in your code
@@ -48,6 +49,12 @@ METHODS
 
     Default: 0
 
+   bitmask_lazyinit
+    Boolean value that enables/disables warnings for lazy initialization. (
+    Lazy initialization = call of init withozt bit values)
+
+    Default: 0
+
    bitmask_items
     HASHREF of all bitmask items. Don't mess around here unless you know
     what you are doing.
@@ -60,9 +67,9 @@ METHODS
     values after the value.
 
         CLASS->init(
-            'value1'
+            'value1' # lazy initilaization
             'value2' => 0x2 ,
-            'value3',
+            'value3', # lazy initilaization
             'value4' => 16,
             'value5' => 0b100000,
         );
@@ -86,15 +93,16 @@ METHODS
         CLASS->any2data(124);
         CLASS->any2data('de_DE');
         CLASS->any2data(0b110001001);
+        CLASS->any2data('0B110001001');
 
-    Turns a single value (bit, bitmask,value) into a value.
+    Turns a single value (bit, bitmask,value, bitmask string) into a value.
 
    _parse_params
         CLASS->_parse_params(LIST)
 
     Helper method for parsing params passed to various methods.
 
-   Public Methods
+  Public Methods
    new
         my $bm = MyBitmask->new();
         my $bm = MyBitmask->new('value1');
@@ -126,18 +134,18 @@ METHODS
     bitmask and sets the supplied arguments.
 
    list
-        $bm->list
+        $bm->list()
 
     In list context, this returns a list of the set values in scalar
     context, this returns an array reference to the list of values.
 
    length
-        $bm->length
+        $bm->length()
 
     Number of set bitmask values.
 
    first
-        $bm->first
+        $bm->first()
 
     Returns the first set value (the order of the values is determied by the
     sequence of the addition)
@@ -152,6 +160,11 @@ METHODS
         $bm->reset();
 
     Unsets all values, leaving an empty list.
+
+   setall
+        $bm->setall();
+
+    Sets all values.
 
    add
         $bm->add(ITEMS);
@@ -228,8 +241,8 @@ SUBCLASSING
             'value1' => 0b000000000000000001,
             'value2' => 0x2,
             'value2' => 4,
-            'value4',
-            'value5',
+            'value4', # lazy initlialization
+            'value5', # lazy initlialization
         );
 
 WORKING WITH DATABASES
@@ -255,7 +268,7 @@ WORKING WITH DATABASES
     If you are working with DBIx::Class you might also install de- and
     inflators for Bitmask objects:
 
-        __PACKAGE__->inflate_column('fialname',{
+        __PACKAGE__->inflate_column('fieldname',{
             inflate => sub {
                 my $value = shift;
                 return MyBitmask->new($value);

@@ -1,0 +1,10 @@
+Revision history for Perl module Catalyst::Model::L10N
+
+1.00 Thu May 29 2007
+    - original version
+1.01 Mon Jun 02 2007
+    - Added changelog
+    - Fixed typos and wrong markup in pod
+1.02 Mon Jun 16 2007
+    - Fixed warning in test
+    - Test for warnings

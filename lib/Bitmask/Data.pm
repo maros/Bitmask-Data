@@ -7,11 +7,10 @@ use warnings;
 use base qw(Class::Data::Inheritable);
 use 5.010;
 
-use Config;
 use Carp;
 use List::Util qw(reduce);
 
-our $VERSION = '1.00';
+our $VERSION = '1.02';
 
 use overload '""' => sub {
     shift->mask,;
@@ -86,7 +85,8 @@ Default: 0
 
 =head3 bitmask_lazyinit
 
-Boolean value that enables/disables warnings for lazy initialization.
+Boolean value that enables/disables warnings for lazy initialization. (
+Lazy initialization = call of init withozt bit values)
 
 Default: 0
 
@@ -104,9 +104,9 @@ Optionally you can also specify the bits for the mask by adding bit values
 after the value. 
  
     CLASS->init(
-        'value1'
+        'value1' # lazy initilaization
         'value2' => 0x2 ,
-        'value3',
+        'value3', # lazy initilaization
         'value4' => 16,
         'value5' => 0b100000,
     );
@@ -123,7 +123,9 @@ sub init {
 
     my $items = {};
     my $count = 0;
-    while ( my $name = shift ) {
+    
+    # Take first element from @_
+    while (my $name = shift @_) {
         my $bit;
 
         $count++;
@@ -136,7 +138,7 @@ sub init {
                 $bit = shift;
             }
             when (m/\A(?:0b)?([01]{$length})\Z/) {
-                $bit = oct(shift);
+                $bit = oct('0b' . $1);
             }
             default {
                 carp( "Lazy bitmask initialization detected: Please enable"
@@ -254,8 +256,9 @@ sub bm2data {
     CLASS->any2data(124);
     CLASS->any2data('de_DE');
     CLASS->any2data(0b110001001);
+    CLASS->any2data('0B110001001');
 
-Turns a single value (bit, bitmask,value) into a value.
+Turns a single value (bit, bitmask,value, bitmask string) into a value.
 
 =cut
 
@@ -282,7 +285,7 @@ sub any2data {
     return @data;
 }
 
-=head4 _parse_params
+=head3 _parse_params
 
     CLASS->_parse_params(LIST)
 
@@ -319,7 +322,7 @@ sub _parse_params {
     return @data;
 }
 
-=head3 Public Methods
+=head2 Public Methods
 
 =head3 new
 
@@ -391,7 +394,7 @@ sub set {
 
 =head3 list
 
-    $bm->list
+    $bm->list()
 
 In list context, this returns a list of the set values in scalar context, 
 this returns an array reference to the list of values.
@@ -406,7 +409,7 @@ sub list {
 
 =head3 length
 
-    $bm->length
+    $bm->length()
 
 Number of set bitmask values.
 
@@ -420,7 +423,7 @@ sub length {
 
 =head3 first 
 
-    $bm->first
+    $bm->first()
     
 Returns the first set value (the order of the values is determied by the 
 sequence of the addition)
@@ -640,8 +643,8 @@ Bitmask::Data was designed to be subclassed.
         'value1' => 0b000000000000000001,
         'value2' => 0x2,
         'value2' => 4,
-        'value4',
-        'value5',
+        'value4', # lazy initlialization
+        'value5', # lazy initlialization
     );
 
 =head1 WORKING WITH DATABASES
@@ -672,7 +675,7 @@ This module provides two convenient methods to work with databases:
 If you are working with DBIx::Class you might also install de- and inflators
 for Bitmask objects:
 
-    __PACKAGE__->inflate_column('fialname',{
+    __PACKAGE__->inflate_column('fieldname',{
         inflate => sub {
             my $value = shift;
             return MyBitmask->new($value);
