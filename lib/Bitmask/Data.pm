@@ -10,7 +10,7 @@ use 5.010;
 use Carp;
 use List::Util qw(reduce);
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 use overload '""' => sub {
     shift->mask,;
