@@ -135,10 +135,11 @@ sub init {
 
         given ( $_[0] ) {
             when (m/^\d+$/) {
-                $bit = shift;
+                $bit = shift @_;
             }
             when (m/\A(?:0b)?([01]{$length})\Z/) {
                 $bit = oct('0b' . $1);
+				shift @_;
             }
             default {
                 carp( "Lazy bitmask initialization detected: Please enable"
