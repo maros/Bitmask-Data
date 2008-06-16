@@ -133,7 +133,7 @@ sub init {
         croak( 'Too many values in bitmask: max ' . $class->bitmask_length )
             if $count > $class->bitmask_length;
 
-        given ( $_[0] ) {
+        given ( $_[0] // '' ) {
             when (m/^\d+$/) {
                 $bit = shift @_;
             }
