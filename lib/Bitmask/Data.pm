@@ -13,16 +13,15 @@ use List::Util qw(reduce);
 
 our $VERSION = '1.00';
 
-use overload
-    '""' => sub {
-        shift->mask,
-    };
+use overload '""' => sub {
+    shift->mask,;
+};
 
-__PACKAGE__->mk_classdata(bitmask_length    => 16);
-__PACKAGE__->mk_classdata(bitmask_items     => {});
-__PACKAGE__->mk_classdata(bitmask_default   => undef);
-__PACKAGE__->mk_classdata(bitmask_complex   => 0);
-__PACKAGE__->mk_classdata(bitmask_lazyinit  => 0);
+__PACKAGE__->mk_classdata( bitmask_length   => 16 );
+__PACKAGE__->mk_classdata( bitmask_items    => {} );
+__PACKAGE__->mk_classdata( bitmask_default  => undef );
+__PACKAGE__->mk_classdata( bitmask_complex  => 0 );
+__PACKAGE__->mk_classdata( bitmask_lazyinit => 0 );
 
 =encoding utf8
 
@@ -120,65 +119,66 @@ sub init {
     my $length = $class->bitmask_length;
 
     croak('Bitmask length not set')
-         unless $length;
+        unless $length;
 
     my $items = {};
     my $count = 0;
-    while (my $name = shift) {
+    while ( my $name = shift ) {
         my $bit;
-        
-        $count ++;
-        
-        croak('Too many values in bitmask: max '.$class->bitmask_length)
-            if $count > $class->bitmask_length;
-        
-        if ($_[0] =~ m/^\d+$/
-            || $_[0] =~ m/\A(?:0b)?([01]{$length})\Z/) {
-            $bit = shift;
-        } else {
-            carp('Lazy bitmask initialization detected: Please enable <bitmask_lazyinit> or change init parameters')
-                unless ($class->bitmask_lazyinit);
-            $bit =  2 ** ($count-1);
-        }
-        
-        $class->_check_bit($bit)
-            or croak('Invalid bit value: '.$bit);
-        
-        croak('Value already in bitmask: '.$name)
-            if exists $items->{$name};
-        
-        croak('Bit already in bitmask: '.$bit)
-            if grep { $_ eq $bit }  values %{$items};
-        
-        $items->{$name} = $bit;
-        
 
+        $count++;
+
+        croak( 'Too many values in bitmask: max ' . $class->bitmask_length )
+            if $count > $class->bitmask_length;
+
+        given ( $_[0] ) {
+            when (m/^\d+$/) {
+                $bit = shift;
+            }
+            when (m/\A(?:0b)?([01]{$length})\Z/) {
+                $bit = oct(shift);
+            }
+            default {
+                carp( "Lazy bitmask initialization detected: Please enable"
+                        . " <bitmask_lazyinit> or change init parameters" )
+                    unless ( $class->bitmask_lazyinit );
+                $bit = 2**( $count - 1 );
+            }
+        }
+
+        $class->_check_bit($bit)
+            or croak( 'Invalid bit value: ' . $bit );
+
+        croak( 'Value already in bitmask: ' . $name )
+            if exists $items->{$name};
+
+        croak( 'Bit already in bitmask: ' . $bit )
+            if grep { $_ eq $bit } values %{$items};
+
+        $items->{$name} = $bit;
     }
-    
+
     $class->bitmask_items($items);
     return;
 }
 
 sub _check_bit {
     my $class = shift;
-    my $bit = shift;
-    
+    my $bit   = shift;
+
     return 1 if $bit == 0;
-    
+
     # Check it it is a power of 2 or complex
-    return 0 
-        if !$class->bitmask_complex && $bit & ($bit - 1);
-    
+    return if !$class->bitmask_complex && $bit & ( $bit - 1 );
+
     # Get bit length
-    my $value = int(log($bit)/log(2));
-    
+    my $value = int( log($bit) / log(2) );
+
     # Reject too long values
-    return 0 
-        if ($value >= $class->bitmask_length);
-         
+    return if ( $value >= $class->bitmask_length );
+
     return 1;
 }
-
 
 =head3 data2bit
 
@@ -189,10 +189,11 @@ Returns the corresponding bit for the given value.
 =cut
 
 sub data2bit {
-    my ($class, $value) = @_;
-    return exists $class->bitmask_items->{$value} ? 
-        $class->bitmask_items->{$value} :
-        undef;
+    my ( $class, $value ) = @_;
+    return
+        exists $class->bitmask_items->{$value}
+        ? $class->bitmask_items->{$value}
+        : undef;
 }
 
 =head3 bit2data
@@ -204,8 +205,8 @@ Returns the corresponding value for the given bit.
 =cut
 
 sub bit2data {
-    my ($class, $bit) = @_;
-    while (my @item = each %{$class->bitmask_items}) {
+    my ( $class, $bit ) = @_;
+    while ( my @item = each %{ $class->bitmask_items } ) {
         return $item[0]
             if $item[1] == $bit;
     }
@@ -224,26 +225,26 @@ sub bm2data {
     my ( $class, $bitmask ) = @_;
 
     die "Invalid bitmask value <$bitmask>"
-        if ($bitmask > (2 ** $class->bitmask_length) - 1);
-    
+        if ( $bitmask > ( 2**$class->bitmask_length ) - 1 );
+
     my @result;
     my $items = $class->bitmask_items;
-    
+
     my $check = 0;
-    $check = $_ | $check foreach (values %{$items});
+    $check = $_ | $check foreach ( values %{$items} );
     die "Invalid bitmask items <$bitmask>"
-        if ($bitmask &  ~ $check);
-    
-    unless ($class->bitmask_complex) {
-        @result = grep { $items->{$_} & $bitmask } keys %{ $items };
-    } else {
+        if ( $bitmask & ~$check );
+
+    unless ( $class->bitmask_complex ) {
+        @result = grep { $items->{$_} & $bitmask } keys %{$items};
+    }
+    else {
         my %bm;
         @bm{ values %$items } = keys %$items;
         my @all = map { $_ & $bitmask } keys %bm;
         my @bitmasks = grep { $_ ~~ %bm } @all;
-        @result =  @bm{@bitmasks};
+        @result = @bm{@bitmasks};
     }
-
 
     return wantarray ? @result : \@result;
 }
@@ -264,7 +265,7 @@ sub any2data {
     my $bl = $class->bitmask_length;
     my @data;
     given ($any) {
-        when (%{ $class->bitmask_items }) {
+        when ( %{ $class->bitmask_items } ) {
             @data = ($any);
         }
         when (m/\A0[bB]([01]{$bl})\Z/) {
@@ -273,8 +274,8 @@ sub any2data {
         when (m/\A\d+\Z/) {
             @data = ( $class->bm2data($any) );
         }
-        default { 
-            die "Could not turn <$any> in anything meaningfull" 
+        default {
+            die "Could not turn <$any> into something meaningful";
         };
     }
 
@@ -297,21 +298,22 @@ sub _parse_params {
         my @tmp;
         if ( ref $param eq 'ARRAY' ) {
             push( @tmp, $class->_parse_params(@$param) );
-        } 
-        elsif (ref $param 
-            && $param->isa(ref $class || $class)
-            && $param->can('list')) {
-            push(@tmp, $param->list );
+        }
+        elsif (ref $param
+            && $param->isa( ref $class || $class )
+            && $param->can('list') )
+        {
+            push( @tmp, $param->list );
         }
         else {
-            push(@tmp, $class->any2data($param) );
+            push( @tmp, $class->any2data($param) );
         }
-        
+
         foreach my $item (@tmp) {
-            push @data,$item
+            push @data, $item
                 unless $item ~~ \@data;
         }
-        
+
     }
 
     return @data;
@@ -351,23 +353,19 @@ bits, bitmasks and values, even mix different types.
 
 sub new {
     my ( $class, @args ) = @_;
-    
+
     croak('Bitmask not initialized')
-        unless scalar keys %{$class->bitmask_items};
-    
-    my $self = bless {
-        _data   => [],
-    },$class;
-    
+        unless scalar keys %{ $class->bitmask_items };
+
+    my $self = bless { _data => [], }, $class;
+
     $self->add( $self->_parse_params(@args) );
-    
-    unless (scalar @{$self->{_data}}) {
-        $self->add( $self->_parse_params($class->bitmask_default) )
+
+    unless ( scalar @{ $self->{_data} } ) {
+        $self->add( $self->_parse_params( $class->bitmask_default ) )
             if defined $class->bitmask_default;
     }
-    
-        
-    
+
     return $self;
 }
 
@@ -381,13 +379,13 @@ and sets the supplied arguments.
 =cut
 
 sub set {
-    my ($self, @args) = @_;
-    
+    my ( $self, @args ) = @_;
+
     $self->{_data} = [];
     $self->add( $self->_parse_params(@args) );
-    
-    $self->{_data} = [ $self->bit2data($self->bitmask_default) ]
-        unless scalar @{$self->{_data}};
+
+    $self->{_data} = [ $self->bit2data( $self->bitmask_default ) ]
+        unless scalar @{ $self->{_data} };
     return;
 }
 
@@ -449,7 +447,7 @@ sub remove {
 
     my @remove = $self->_parse_params(@args);
 
-    $self->{_data} = [ grep { ! ( $_ ~~ @remove ) } @{$self->{_data}} ];
+    $self->{_data} = [ grep { !( $_ ~~ @remove ) } @{ $self->{_data} } ];
 }
 
 =head3 reset
@@ -461,7 +459,7 @@ Unsets all values, leaving an empty list.
 =cut
 
 sub reset {
-    my ( $self ) = @_;
+    my ($self) = @_;
     $self->{_data} = [];
 }
 
@@ -474,10 +472,9 @@ Sets all values.
 =cut
 
 sub setall {
-    my ( $self ) = @_;
-    $self->{_data} = [ keys %{$self->bitmask_items} ];
+    my ($self) = @_;
+    $self->{_data} = [ keys %{ $self->bitmask_items } ];
 }
-
 
 =head3 add
 
@@ -494,8 +491,8 @@ sub add {
     my @set = $self->_parse_params(@args);
 
     my @data = $self->list;
-    push( @data,  grep { !( $_ ~~ @{$self->{_data}} ) } @set  );
-    $self->{_data}  = \@data;
+    push( @data, grep { !( $_ ~~ @{ $self->{_data} } ) } @set );
+    $self->{_data} = \@data;
 }
 
 =head3 mask
@@ -509,10 +506,9 @@ Returns the integer representing the bitmask of all the set values.
 sub mask {
     my ($self) = @_;
     my $items = $self->bitmask_items;
-    return int( 
-        ( 
-        reduce { $a | $b } map { $items->{$_} } @{$self->{_data}} ) // 0  
-        );
+    return
+        int( ( reduce { $a | $b } map { $items->{$_} } @{ $self->{_data} } )
+        // 0 );
 }
 
 =head3 string
@@ -525,7 +521,7 @@ Retuns the string representing the bitmask.
 
 sub string {
     my ($self) = @_;
-    return sprintf( '%0' . $self->bitmask_length . 'b' , $self->mask() );
+    return sprintf( '%0' . $self->bitmask_length . 'b', $self->mask() );
 }
 
 =head3 sqlfilter
@@ -560,10 +556,10 @@ Example how to use sqlfilter with DBIx::Class:
 =cut
 
 sub sqlfilter {
-    my ($self,$field) = @_;
+    my ( $self, $field ) = @_;
 
     my $sql_mask = $self->string();
-    my $format = "bitand( $field, B'$sql_mask' )";
+    my $format   = "bitand( $field, B'$sql_mask' )";
     return ( $format, \" = B'$sql_mask'" );
 }
 
@@ -577,10 +573,10 @@ are set and returns true or false.
 =cut
 
 sub hasall {
-    my ($self, @args) = @_;
-    
+    my ( $self, @args ) = @_;
+
     my @check = $self->_parse_params(@args);
-    
+
     foreach my $data (@check) {
         return 0 unless $data ~~ $self->{_data};
     }
@@ -597,13 +593,13 @@ exactly match the set values.
 =cut
 
 sub hasexact {
-    my ($self, @args) = @_;
-    
+    my ( $self, @args ) = @_;
+
     my @check = $self->_parse_params(@args);
-    
+
     return 0
         unless scalar @check == $self->length;
-    
+
     return $self->hasall(@args);
 }
 
@@ -618,10 +614,10 @@ matches the supplied value list and returns true or false
 =cut
 
 sub hasany {
-    my ($self, @args) = @_;
-    
+    my ( $self, @args ) = @_;
+
     my @check = $self->_parse_params(@args);
-        
+
     foreach my $data (@check) {
         return 1 if $data ~~ $self->{_data};
     }

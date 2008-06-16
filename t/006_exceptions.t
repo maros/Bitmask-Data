@@ -13,10 +13,10 @@ use Testmask1;
 my $tm = Testmask1->new();
 
 my @broken_input = (
-    'hase', qr/Could not turn <hase> in anything meaningfull/,
+    'hase', qr/Could not turn <hase> into something meaningful/,
     262143, qr/Invalid bitmask value <262143>/,
-    '0b11001010101010101', qr/Could not turn <0b11001010101010101> in anything meaningfull/,
-    'value99', qr/Could not turn <value99> in anything meaningfull/,
+    '0b11001010101010101', qr/Could not turn <0b11001010101010101> into something meaningful/,
+    'value99', qr/Could not turn <value99> into something meaningful/,
     ['value1',262149], qr/Invalid bitmask value <262149>/,
     '0b1100101010101010', qr/Invalid bitmask items <51882>/,
 );
