@@ -2,7 +2,9 @@
 
 # t/004_basic.t - check basic stuff
 
-use Test::More tests=>13;
+use Test::More tests=>15;
+use Test::Warn;
+use Test::NoWarnings;
 
 use strict;
 use warnings;
@@ -44,17 +46,30 @@ eval {
 like($@,qr/Bitmask length not set/);
 
 Testmask4->bitmask_length(4);
-eval {
+
+warnings_like {
     Testmask4->init(
         'hase',
         'baer',
         'luchs',
         'sackratte',
-        'maus'
+    );
+} [qr/Lazy bitmask initialization detected/,qr/Lazy bitmask initialization detected/,qr/Lazy bitmask initialization detected/,qr/Lazy bitmask initialization detected/], "Lazy init warning";
+
+Testmask4->bitmask_items({});
+
+eval {
+    Testmask4->init(
+        'hase' => 1,
+        'baer' => 2,
+        'luchs' => 4,
+        'sackratte' => 8,
+        'maus' => 16
     );
 };
 like($@,qr/Too many values in bitmask: max/);
 
+Testmask4->bitmask_lazyinit(1);
 Testmask4->bitmask_items({});
 eval {
     Testmask4->init(
@@ -96,6 +111,7 @@ eval {
 };
 like($@,qr/Bitmask not initialized/);
 
+Testmask4->bitmask_length(4);
 Testmask4->bitmask_items({});
 eval {
     Testmask4->init(

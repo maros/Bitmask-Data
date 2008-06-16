@@ -2,7 +2,8 @@
 
 # t/005_testmask2.t - check testmask 2
 
-use Test::More tests => 62;
+use Test::More tests => 63;
+use Test::NoWarnings;
 
 use strict;
 use warnings;

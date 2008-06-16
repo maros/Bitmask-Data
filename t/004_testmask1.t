@@ -2,7 +2,8 @@
 
 # t/004_testmask1.t - check testmask 1
 
-use Test::More tests=>49;
+use Test::More tests=>50;
+use Test::NoWarnings;
 
 use strict;
 use warnings;
