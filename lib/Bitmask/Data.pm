@@ -268,6 +268,10 @@ sub any2data {
 
     my $bl = $class->bitmask_length;
     my @data;
+    
+    croak "Bitmask, Item or integer expected"
+        unless defined $any;
+    
     given ($any) {
         when ( %{ $class->bitmask_items } ) {
             @data = ($any);
