@@ -83,10 +83,46 @@ init will only accept bits that are powers of 2.
 
 Default: 0
 
+Complex bitmask also allow the creation of overlapping bitmask values:
+ 
+ # Create a simple bitmask class
+ packacke LocaleBitmask;
+ use base qw(Bitmask::Data);
+ __PACKAGE__->bitmask_length(6);
+ __PACKAGE__->bitmask_complex(1);
+ __PACKAGE__->bitmask_default(0b000000000000000011);
+ __PACKAGE__->init(
+    AT      => 0b000_00001, # Austria
+    CH      => 0b000_00010, # Switzerland
+    DE      => 0b000_00100, # Germany
+    FR      => 0b000_01000, # France
+    IT      => 0b000_10000, # Italy
+    
+    de      => 0b001_00000, # German
+    fr      => 0b010_00000, # French
+    it      => 0b100_00000, # Italian
+    
+    de_AT   => 0b001_00001, # German / Austria
+    de_CH   => 0b001_00010, # German / Switzerland
+    de_DE   => 0b001_00100, # German / Germany
+    fr_CH   => 0b010_00010, # French / Germany
+    fr_FR   => 0b010_01000, # French / France
+    it_CH   => 0b100_00010, # Italian / Germany    
+    it_IT   => 0b100_10000, # Italian / Italy
+ );
+ 
+ # Somewhere else
+ 
+ LocaleBitmask->new('de')->hasany('de'); # true
+ LocaleBitmask->new('de')->hasany('de_DE'); # true
+ LocaleBitmask->new('de')->hasall('de_DE'); # false
+ LocaleBitmask->new('de_DE','de_AT','de_CH')->hasexact('de','AT','DE','CH'); # true
+ LocaleBitmask->new('de_DE','de_AT','de_CH')->list # de,DE,de_DE,de_AT,AT,de_CH,CH
+
 =head3 bitmask_lazyinit
 
 Boolean value that enables/disables warnings for lazy initialization. (
-Lazy initialization = call of init withozt bit values)
+Lazy initialization = call of init without bit values)
 
 Default: 0
 
@@ -156,7 +192,7 @@ sub init {
             if exists $items->{$name};
 
         croak( 'Bit already in bitmask: ' . $bit )
-            if grep { $_ eq $bit } values %{$items};
+            if grep { $class->bitmask_complex ? ($_ eq $bit) : ($_ & $bit) } values %{$items};
 
         $items->{$name} = $bit;
     }
@@ -238,15 +274,15 @@ sub bm2data {
     die "Invalid bitmask items <$bitmask>"
         if ( $bitmask & ~$check );
 
-    unless ( $class->bitmask_complex ) {
-        @result = grep { $items->{$_} & $bitmask } keys %{$items};
-    }
-    else {
+    if ( $class->bitmask_complex ) {
         my %bm;
         @bm{ values %$items } = keys %$items;
         my @all = map { $_ & $bitmask } keys %bm;
         my @bitmasks = grep { $_ ~~ %bm } @all;
         @result = @bm{@bitmasks};
+    }
+    else {
+        @result = grep { $items->{$_} & $bitmask } keys %{$items};
     }
 
     return wantarray ? @result : \@result;
@@ -258,6 +294,7 @@ sub bm2data {
     CLASS->any2data('de_DE');
     CLASS->any2data(0b110001001);
     CLASS->any2data('0B110001001');
+    CLASS->any2data('0b111000001');
 
 Turns a single value (bit, bitmask,value, bitmask string) into a value.
 
@@ -303,6 +340,7 @@ sub _parse_params {
 
     my @data = ();
     foreach my $param (@args) {
+        next unless defined $param;
         my @tmp;
         if ( ref $param eq 'ARRAY' ) {
             push( @tmp, $class->_parse_params(@$param) );
@@ -318,8 +356,15 @@ sub _parse_params {
         }
 
         foreach my $item (@tmp) {
-            push @data, $item
-                unless $item ~~ \@data;
+            if ( $class->bitmask_complex ) {
+                foreach ($class->bm2data($class->data2bit($item))) {
+                    push @data, $_
+                        unless $_ ~~ \@data;
+                }
+            } else {
+                push @data, $item
+                    unless $item ~~ \@data;
+            }
         }
 
     }
@@ -603,12 +648,9 @@ exactly match the set values.
 sub hasexact {
     my ( $self, @args ) = @_;
 
-    my @check = $self->_parse_params(@args);
+    my $class = ref $self;
 
-    return 0
-        unless scalar @check == $self->length;
-
-    return $self->hasall(@args);
+    return $class->new(@args)->mask == $self->mask ? 1:0;
 }
 
 =head3 hasany
@@ -636,6 +678,9 @@ sub hasany {
 
 Since Bitmask::Data is very liberal with input data you cannot use numbers
 as bitmask values.
+
+Bitmask::Data also adds a considerable processing overhead (especially when 
+the bitmask_complex option is enabled) to bitmask manipulations.
 
 =head1 SUBCLASSING
 
