@@ -2,7 +2,7 @@
 
 # t/008_testmask4.t - check testmask 4
 
-use Test::More tests => 26;
+use Test::More tests => 27;
 use Test::NoWarnings;
 
 use strict;
@@ -39,6 +39,3 @@ ok(Testmask4->new('de_DE','de_AT','de_CH')->hasexact('de','AT','DE','CH'));
 ok(Testmask4->new('de','fr')->hasany('fr'));
 ok(Testmask4->new('de','fr')->hasany('de_DE'));
 ok(! Testmask4->new('de','fr')->hasall('de','it'));
-
-
-die join ',',Testmask4->new('de_DE','de_AT','de_CH')->list;
