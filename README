@@ -49,9 +49,45 @@ METHODS
 
     Default: 0
 
+    Complex bitmask also allow the creation of overlapping bitmask values:
+
+     # Create a simple bitmask class
+     packacke LocaleBitmask;
+     use base qw(Bitmask::Data);
+     __PACKAGE__->bitmask_length(6);
+     __PACKAGE__->bitmask_complex(1);
+     __PACKAGE__->bitmask_default(0b000000000000000011);
+     __PACKAGE__->init(
+        AT      => 0b000_00001, # Austria
+        CH      => 0b000_00010, # Switzerland
+        DE      => 0b000_00100, # Germany
+        FR      => 0b000_01000, # France
+        IT      => 0b000_10000, # Italy
+        
+    de      => 0b001_00000, # German
+        fr      => 0b010_00000, # French
+        it      => 0b100_00000, # Italian
+        
+    de_AT   => 0b001_00001, # German / Austria
+        de_CH   => 0b001_00010, # German / Switzerland
+        de_DE   => 0b001_00100, # German / Germany
+        fr_CH   => 0b010_00010, # French / Germany
+        fr_FR   => 0b010_01000, # French / France
+        it_CH   => 0b100_00010, # Italian / Germany    
+        it_IT   => 0b100_10000, # Italian / Italy
+     );
+     
+ # Somewhere else
+     
+ LocaleBitmask->new('de')->hasany('de'); # true
+     LocaleBitmask->new('de')->hasany('de_DE'); # true
+     LocaleBitmask->new('de')->hasall('de_DE'); # false
+     LocaleBitmask->new('de_DE','de_AT','de_CH')->hasexact('de','AT','DE','CH'); # true
+     LocaleBitmask->new('de_DE','de_AT','de_CH')->list # de,DE,de_DE,de_AT,AT,de_CH,CH
+
    bitmask_lazyinit
     Boolean value that enables/disables warnings for lazy initialization. (
-    Lazy initialization = call of init withozt bit values)
+    Lazy initialization = call of init without bit values)
 
     Default: 0
 
@@ -94,6 +130,7 @@ METHODS
         CLASS->any2data('de_DE');
         CLASS->any2data(0b110001001);
         CLASS->any2data('0B110001001');
+        CLASS->any2data('0b111000001');
 
     Turns a single value (bit, bitmask,value, bitmask string) into a value.
 
@@ -230,6 +267,9 @@ METHODS
 CAVEATS
     Since Bitmask::Data is very liberal with input data you cannot use
     numbers as bitmask values.
+
+    Bitmask::Data also adds a considerable processing overhead (especially
+    when the bitmask_complex option is enabled) to bitmask manipulations.
 
 SUBCLASSING
     Bitmask::Data was designed to be subclassed.

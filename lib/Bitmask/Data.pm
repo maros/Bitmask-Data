@@ -10,7 +10,7 @@ use 5.010;
 use Carp;
 use List::Util qw(reduce);
 
-our $VERSION = '1.03';
+our $VERSION = '1.04';
 
 use overload '""' => sub {
     shift->mask,;
@@ -208,13 +208,13 @@ sub _check_bit {
     return 1 if $bit == 0;
 
     # Check it it is a power of 2 or complex
-    return if !$class->bitmask_complex && $bit & ( $bit - 1 );
+    return 0 if !$class->bitmask_complex && $bit & ( $bit - 1 );
 
     # Get bit length
     my $value = int( log($bit) / log(2) );
 
     # Reject too long values
-    return if ( $value >= $class->bitmask_length );
+    return 0 if ( $value >= $class->bitmask_length );
 
     return 1;
 }
@@ -412,12 +412,7 @@ sub new {
 
     my $self = bless { _data => [], }, $class;
 
-    $self->add( $self->_parse_params(@args) );
-
-    unless ( scalar @{ $self->{_data} } ) {
-        $self->add( $self->_parse_params( $class->bitmask_default ) )
-            if defined $class->bitmask_default;
-    }
+    $self->set( @args );
 
     return $self;
 }
@@ -427,7 +422,9 @@ sub new {
     $bm->set(ITEMS);
     
 This method takes the same arguments as C<new>. It resets the current bitmask
-and sets the supplied arguments.
+and sets the supplied arguments. 
+
+Returns the object.
 
 =cut
 
@@ -435,11 +432,14 @@ sub set {
     my ( $self, @args ) = @_;
 
     $self->{_data} = [];
-    $self->add( $self->_parse_params(@args) );
+    $self->add(@args);
 
-    $self->{_data} = [ $self->bit2data( $self->bitmask_default ) ]
-        unless scalar @{ $self->{_data} };
-    return;
+    unless ( scalar @{ $self->{_data} } ) {
+        $self->add( $self->bitmask_default )
+            if defined $self->bitmask_default;
+    }
+    
+    return $self;
 }
 
 =head3 list
@@ -493,6 +493,8 @@ sub first {
 This method takes the same arguments as C<new>. The values supplied in the
 arguments will be unset.
 
+Returns the object.
+
 =cut
 
 sub remove {
@@ -501,6 +503,7 @@ sub remove {
     my @remove = $self->_parse_params(@args);
 
     $self->{_data} = [ grep { !( $_ ~~ @remove ) } @{ $self->{_data} } ];
+    return $self;
 }
 
 =head3 reset
@@ -509,11 +512,14 @@ sub remove {
 
 Unsets all values, leaving an empty list.
 
+Returns the object.
+
 =cut
 
 sub reset {
     my ($self) = @_;
-    $self->{_data} = [];
+    $self->set();
+    return $self;
 }
 
 =head3 setall
@@ -522,11 +528,14 @@ sub reset {
 
 Sets all values.
 
+Returns the object.
+
 =cut
 
 sub setall {
     my ($self) = @_;
     $self->{_data} = [ keys %{ $self->bitmask_items } ];
+    return $self;
 }
 
 =head3 add
@@ -535,6 +544,8 @@ sub setall {
 
 This method takes the same arguments as C<new>. The specified values will
 be set.
+
+Returns the object.
 
 =cut
 
@@ -546,6 +557,7 @@ sub add {
     my @data = $self->list;
     push( @data, grep { !( $_ ~~ @{ $self->{_data} } ) } @set );
     $self->{_data} = \@data;
+    return $self;
 }
 
 =head3 mask
@@ -577,9 +589,9 @@ sub string {
     return sprintf( '%0' . $self->bitmask_length . 'b', $self->mask() );
 }
 
-=head3 sqlfilter
+=head3 sqlfilter_all
 
-    $bm->sqlfilter($field);
+    $bm->sqlfilter_all($field);
 
 This method can be used for database searches in conjunction with 
 L<SQL::Abstract> an POSTGRESQL (SQL::Abstract is used by C<DBIx::Class> for
@@ -593,7 +605,7 @@ Example how to use sqlfilter with SQL::Abstract:
         'mytable', 
         \@fields,
         {
-            $bm->sqlfilter('mytable.bitmaskfield'),
+            $bm->sqlfilter_all('mytable.bitmaskfield'),
         }
     );
 
@@ -601,20 +613,39 @@ Example how to use sqlfilter with DBIx::Class:
    
     my $list = $resultset->search(
         { 
-            $bm->sqlfilter('me.bitmaskfield'), 
+            $bm->sqlfilter_all('me.bitmaskfield'), 
         },
     );
 
 
 =cut
 
-sub sqlfilter {
+*sqlfilter = \&sqlfilter_all;
+
+sub sqlfilter_all {
     my ( $self, $field ) = @_;
 
     my $sql_mask = $self->string();
     my $format   = "bitand( $field, B'$sql_mask' )";
     return ( $format, \" = B'$sql_mask'" );
 }
+
+=head3 sqlfilter_any
+
+    $bm->sqlfilter_any($field);
+
+Works like C<sqlfilter_all> but checks for any bit matching
+
+=cut
+
+sub sqlfilter_any {
+    my ( $self, $field ) = @_;
+
+    my $sql_mask = $self->string();
+    my $format   = "bitand( $field, B'$sql_mask' )";
+    return ( $format, \" = TRUE" );
+}
+
 
 =head3 hasall
 
@@ -628,12 +659,11 @@ are set and returns true or false.
 sub hasall {
     my ( $self, @args ) = @_;
 
-    my @check = $self->_parse_params(@args);
+    my $class = ref $self;
 
-    foreach my $data (@check) {
-        return 0 unless $data ~~ $self->{_data};
-    }
-    return 1;
+    my $mask = $class->new(@args)->mask;
+     
+    return (($mask & $self->mask) == $mask) ? 1:0;
 }
 
 =head3 hasexact
@@ -658,20 +688,16 @@ sub hasexact {
     $bm->hasany(ITEMS);
 
 This method takes the same arguments as C<new>. Checks if at least one set 
-value 
-matches the supplied value list and returns true or false
+value matches the supplied value list and returns true or false
 
 =cut
 
 sub hasany {
     my ( $self, @args ) = @_;
 
-    my @check = $self->_parse_params(@args);
+    my $class = ref $self;
 
-    foreach my $data (@check) {
-        return 1 if $data ~~ $self->{_data};
-    }
-    return 0;
+    return $class->new(@args)->mask & $self->mask ? 1:0;
 }
 
 =head1 CAVEATS
