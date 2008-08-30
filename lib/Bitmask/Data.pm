@@ -10,7 +10,7 @@ use 5.010;
 use Carp;
 use List::Util qw(reduce);
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 use overload '""' => sub {
     shift->mask,;
@@ -79,18 +79,16 @@ Default: undef
 =head3 bitmask_complex
 
 Boolean value that enables/disables checks for composed bitmasks. If false
-init will only accept bits that are powers of 2. 
+init will only accept bitmask bit values that are powers of 2. 
 
 Default: 0
 
 Complex bitmask also allow the creation of overlapping bitmask values:
  
- # Create a simple bitmask class
  packacke LocaleBitmask;
  use base qw(Bitmask::Data);
- __PACKAGE__->bitmask_length(6);
- __PACKAGE__->bitmask_complex(1);
- __PACKAGE__->bitmask_default(0b000000000000000011);
+ __PACKAGE__->bitmask_length(8); # 8 bits
+ __PACKAGE__->bitmask_complex(1); # enable overlapping bitmasks
  __PACKAGE__->init(
     AT      => 0b000_00001, # Austria
     CH      => 0b000_00010, # Switzerland
@@ -122,7 +120,7 @@ Complex bitmask also allow the creation of overlapping bitmask values:
 =head3 bitmask_lazyinit
 
 Boolean value that enables/disables warnings for lazy initialization. (
-Lazy initialization = call of init without bit values)
+Lazy initialization = call of init without bitmask bit values)
 
 Default: 0
 
@@ -140,11 +138,20 @@ Optionally you can also specify the bits for the mask by adding bit values
 after the value. 
  
     CLASS->init(
-        'value1' # lazy initilaization
-        'value2' => 0x2 ,
-        'value3', # lazy initilaization
-        'value4' => 16,
-        'value5' => 0b100000,
+        'value1' => 0b000001,
+        'value2' => 0b000010,
+        'value3' => 0b001000,
+        'value4' => 0b010000,
+    );
+    
+With C<bitmask_lazyinit> enabled you can also skip the bitmask bit values
+
+    CLASS->bitmask_lazyinit(1);
+    CLASS->init(
+        'value1',
+        'value2',
+        'value3',
+        'value4',
     );
 
 =cut
@@ -290,11 +297,11 @@ sub bm2data {
 
 =head3 any2data
 
-    CLASS->any2data(124);
-    CLASS->any2data('de_DE');
-    CLASS->any2data(0b110001001);
-    CLASS->any2data('0B110001001');
-    CLASS->any2data('0b111000001');
+    CLASS->any2data(124); # Bitmask
+    CLASS->any2data('de_DE'); # Value
+    CLASS->any2data(0b110001001); # Bitmask in bit notation
+    CLASS->any2data('0B110001001'); # Bitmask string
+    CLASS->any2data('0b111000001'); # Bitmask string
 
 Turns a single value (bit, bitmask,value, bitmask string) into a value.
 
@@ -391,8 +398,6 @@ bits, bitmasks and values, even mix different types.
 =over
 
 =item * LIST or ARRAYREF of values
-
-=item * LIST or ARRAYREF of bits (integers)
 
 =item * LIST or ARRAYREF of strings representing bits or bitmasks (starting with '0b')
 
@@ -620,6 +625,12 @@ Example how to use sqlfilter with DBIx::Class:
 
 =cut
 
+=head3 sqlfilter
+
+Shortcut for C<sqlfilter_all>
+
+=cut
+
 *sqlfilter = \&sqlfilter_all;
 
 sub sqlfilter_all {
@@ -736,15 +747,17 @@ First you need to create the correct column types:
         otherfields character varying
     );
 
-The length of the bitmask field must match C<CLAS-E<gt>bitmask_length>.
+The length of the bitmask field must match C<CLASS-E<gt>bitmask_length>.
 
-This module provides two convenient methods to work with databases:
+This module provides three convenient methods to work with databases:
 
 =over
 
-=item * L<sqlfilter>: Search which have the current values set
+=item * L<sqlfilter_all>: Search for matching bitmasks
 
-=item * L<string>: Print the bitmask string as used by the database
+=item * L<sqlfilter_any>: Search for bitmasks with matching bits
+
+=item * L<string>: Print the bitmask string as used by postgres database
 
 =back
 

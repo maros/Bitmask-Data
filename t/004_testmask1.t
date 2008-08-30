@@ -2,7 +2,7 @@
 
 # t/004_testmask1.t - check testmask 1
 
-use Test::More tests=>50;
+use Test::More tests=>49;
 use Test::NoWarnings;
 
 use strict;
@@ -49,7 +49,7 @@ is($tm->string,'1000000000001000');
 my @sqlsearch = $tm->sqlfilter('field');
 is($sqlsearch[0],"bitand( field, B'1000000000001000' )");
 is(${$sqlsearch[1]}," = B'1000000000001000'");
-ok($tm->reset);
+$tm->reset;
 is($tm->length,0);
 ok($tm->add(0b1000000000111111));
 is($tm->length,7);
