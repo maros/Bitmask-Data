@@ -2,6 +2,7 @@ Revision history for Perl module Bitmask::Data
 1.05 Fri Aug 30 2008
     - Added additional tests
     - Better support for overlapping complex bitmasks 
+    - Clone and additional search/compare methods
 1.04 Fri Aug 30 2008
     - Maintenance release
     - Added tests 

@@ -422,6 +422,22 @@ sub new {
     return $self;
 }
 
+=head3 clone
+
+    $bm2 = $bm->clone();
+    
+Clones a bitmask object
+
+=cut
+
+sub clone {
+    my ( $self ) = @_;
+
+    my $new = bless { _data => \ @{$self->{_data}}, }, ref $self;
+    
+    return $new;
+}
+
 =head3 set
 
     $bm->set(ITEMS);
