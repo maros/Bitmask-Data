@@ -169,6 +169,11 @@ METHODS
 
     *   Any combination of the above
 
+   clone
+        $bm2 = $bm->clone();
+
+    Clones a bitmask object
+
    set
         $bm->set(ITEMS);
 
