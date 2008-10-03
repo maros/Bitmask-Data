@@ -10,11 +10,37 @@ use 5.010;
 use Carp;
 use List::Util qw(reduce);
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
-use overload '""' => sub {
-    shift->mask,;
-};
+use overload 
+    '0+'    => 'mask',
+    '""'    => 'string',
+    '<=>'   => sub {
+        my ($self,$value,$order) = @_;
+        $value = $value->mask
+            if ref $value && $value->isa('Bitmask::Data');
+        $self = $self->mask;
+        return ($order) ? 
+            $self <=> $value :
+            $value <=> $self;
+    },
+    'cmp'   => sub {
+        my ($self,$value,$order) = @_;
+        $value = $value->string
+            if ref $value && $value->isa('Bitmask::Data');
+        $self = $self->string;
+        return ($order) ? 
+            $self cmp $value :
+            $value cmp $self;
+    },
+    '+'     => sub {
+        my ($self,$value) = @_;
+        return $self->add($value); 
+    },
+    '-'     => sub {
+        my ($self,$value) = @_;
+        return $self->remove($value); 
+    },
 
 __PACKAGE__->mk_classdata( bitmask_length   => 16 );
 __PACKAGE__->mk_classdata( bitmask_items    => {} );
@@ -103,9 +129,9 @@ Complex bitmask also allow the creation of overlapping bitmask values:
     de_AT   => 0b001_00001, # German / Austria
     de_CH   => 0b001_00010, # German / Switzerland
     de_DE   => 0b001_00100, # German / Germany
-    fr_CH   => 0b010_00010, # French / Germany
+    fr_CH   => 0b010_00010, # French / Switzerland
     fr_FR   => 0b010_01000, # French / France
-    it_CH   => 0b100_00010, # Italian / Germany    
+    it_CH   => 0b100_00010, # Italian / Switzerland    
     it_IT   => 0b100_10000, # Italian / Italy
  );
  
@@ -378,6 +404,30 @@ sub _parse_params {
 
     return @data;
 }
+
+=head2 Overloaded operators
+
+Bitmask::Data uses overload by default. 
+
+=over
+
+=item * Numeric context
+
+Returns bitmask integer value (see L<mask> method)
+
+=item * Scalar context
+
+Returns bitmask string representation (see L<string> method)
+
+=item * String comparison
+
+=item * Numeric comparison
+
+=item * - (Minus)
+
+=item * + (Minus)
+
+=back
 
 =head2 Public Methods
 
