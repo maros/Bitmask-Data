@@ -2,7 +2,7 @@
 
 # t/007_testmask3.t - check testmask 3
 
-use Test::More tests => 4;
+use Test::More tests => 7;
 use Test::NoWarnings;
 
 use strict;
@@ -16,3 +16,8 @@ my $tm = Testmask3->new();
 $tm->setall;
 is($tm->length,3);
 is($tm->mask,7);
+$tm->remove('w');
+is($tm->length,2);
+is($tm->string,'101');
+$tm->neg();
+is($tm->string,'010');

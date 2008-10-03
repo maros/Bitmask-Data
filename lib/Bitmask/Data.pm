@@ -33,15 +33,28 @@ use overload
             $self cmp $value :
             $value cmp $self;
     },
-    '+'     => sub {
+    '+='     => sub {
         my ($self,$value) = @_;
-        return $self->add($value); 
+        return $self->add($value);
     },
-    '-'     => sub {
+    '-='     => sub {
         my ($self,$value) = @_;
-        return $self->remove($value); 
+        return $self->remove($value);
     },
-
+    '|'     => sub {
+        my ($self,$value) = @_;
+        return $self->mask | $value; 
+    },
+    '^'     => sub {
+        my ($self,$value) = @_;
+        return $self->mask ^ $value; 
+    },
+    '^'     => sub {
+        my ($self,$value) = @_;
+        return $self->mask ^ $value; 
+    };
+    
+    
 __PACKAGE__->mk_classdata( bitmask_length   => 16 );
 __PACKAGE__->mk_classdata( bitmask_items    => {} );
 __PACKAGE__->mk_classdata( bitmask_default  => undef );
@@ -138,7 +151,7 @@ Complex bitmask also allow the creation of overlapping bitmask values:
  # Somewhere else
  
  LocaleBitmask->new('de')->hasany('de'); # true
- LocaleBitmask->new('de')->hasany('de_DE'); # true
+ LocaleBitmask->new('de')->hasany('de_DE'); # true ('de' matches)
  LocaleBitmask->new('de')->hasall('de_DE'); # false
  LocaleBitmask->new('de_DE','de_AT','de_CH')->hasexact('de','AT','DE','CH'); # true
  LocaleBitmask->new('de_DE','de_AT','de_CH')->list # de,DE,de_DE,de_AT,AT,de_CH,CH
@@ -149,6 +162,13 @@ Boolean value that enables/disables warnings for lazy initialization. (
 Lazy initialization = call of init without bitmask bit values)
 
 Default: 0
+
+ __PACKAGE__->bitmask_lazyinit(1);
+ __PACKAGE__->init(
+    'value1', # will be 0b001
+    'value2', # will be 0b010
+    'value3'  # will be 0b100
+ );
 
 =head3 bitmask_items
 
@@ -423,9 +443,17 @@ Returns bitmask string representation (see L<string> method)
 
 =item * Numeric comparison
 
-=item * - (Minus)
+=item * -=
 
-=item * + (Minus)
+Removes bitmask value (see L<remove> method)
+
+=item * +=
+
+Adds bitmask value (see L<ass> method)
+
+=item * ~, ^, &, |
+
+Performs the bit operations on the bitmask
 
 =back
 
@@ -631,6 +659,28 @@ sub add {
     return $self;
 }
 
+=head3 neg
+
+    $bm->neg();
+
+Negative. Sets all unset values and vice versa.
+
+Returns the object.
+
+=cut
+
+sub neg {
+    my ( $self ) = @_;
+
+    my $new = [];
+    foreach my $item (keys %{$self->bitmask_items}) {
+        push @{$new},$item
+            unless grep {$_ eq $item} @{$self->{_data}};
+    }
+    $self->{_data} = $new;
+    return $self;
+}
+
 =head3 mask
 
     $bm->mask();
@@ -782,8 +832,9 @@ sub hasany {
 Since Bitmask::Data is very liberal with input data you cannot use numbers
 as bitmask values.
 
-Bitmask::Data also adds a considerable processing overhead (especially when 
-the bitmask_complex option is enabled) to bitmask manipulations.
+Bitmask::Data adds a considerable processing overhead (especially when 
+the bitmask_complex option is enabled) to bitmask manipulations. If you don't
+need the extra comfort please use the perl built in bit operators.
 
 =head1 SUBCLASSING
 
