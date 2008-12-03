@@ -48,10 +48,6 @@ use overload
     '^'     => sub {
         my ($self,$value) = @_;
         return $self->mask ^ $value; 
-    },
-    '^'     => sub {
-        my ($self,$value) = @_;
-        return $self->mask ^ $value; 
     };
     
     
@@ -830,7 +826,8 @@ sub hasany {
 =head1 CAVEATS
 
 Since Bitmask::Data is very liberal with input data you cannot use numbers
-as bitmask values.
+as bitmask values. (It would think that you are supplying a bitmask and not
+a value)
 
 Bitmask::Data adds a considerable processing overhead (especially when 
 the bitmask_complex option is enabled) to bitmask manipulations. If you don't

@@ -21,7 +21,9 @@ t/005_testmask2.t
 t/006_exceptions.t
 t/007_testmask3.t
 t/008_testmask4.t
+t/009_overload.t
 t/lib/Testmask1.pm
 t/lib/Testmask2.pm
 t/lib/Testmask3.pm
 t/lib/Testmask4.pm
+t/lib/Testmask5.pm
