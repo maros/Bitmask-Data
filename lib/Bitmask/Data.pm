@@ -70,7 +70,7 @@ Bitmask::Data - Handle bitmasks in an easy and flexible way
 =head1 SYNOPSIS
 
  # Create a simple bitmask class
- packacke MyBitmask;
+ package MyBitmask;
  use base qw(Bitmask::Data);
  __PACKAGE__->bitmask_length(18);
  __PACKAGE__->bitmask_default(0b000000000000000011);
