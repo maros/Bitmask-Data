@@ -1,5 +1,14 @@
 Revision history for Perl module Bitmask::Data
 
+1.08	2008-12-15 12:29:33
+    - due to git-repo-name missmatches I didn't get all updates, so: yet another release
+      (Thomas Klausner)
+
+
+1.07	2008-12-15 12:26:29
+    - Removed extra overload param (Maros Kollar)
+    - fix typo in perldoc (Klaus Ita)
+
 1.06 Fri Oct 3 2008
     - More overload methods
     - Added additional tests

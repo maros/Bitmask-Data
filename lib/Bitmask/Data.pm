@@ -10,7 +10,7 @@ use 5.010;
 use Carp;
 use List::Util qw(reduce);
 
-our $VERSION = '1.06';
+our $VERSION = '1.08';
 
 use overload 
     '0+'    => 'mask',
@@ -572,7 +572,7 @@ sub length {
 
     $bm->first()
     
-Returns the first set value (the order of the values is determied by the 
+Returns the first set value (the order of the values is determined by the 
 sequence of the addition)
 
 =cut
@@ -934,4 +934,4 @@ LICENSE file included with this module.
 
 =cut
 
-'0b000000000001';
+0b000000000001;
