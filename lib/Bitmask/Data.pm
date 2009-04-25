@@ -103,6 +103,8 @@ objects which can be accessed and manipulated with convenient methods.
 Set/Get the length of the bitmask. Changing this value after the 
 initialization is not recommended.
 
+Bitmask length is limited to 32 (respectively 64 on 64-bit perl).
+
 Default: 16
 
 =head3 bitmask_default
@@ -659,7 +661,7 @@ sub add {
 
     $bm->neg();
 
-Negative. Sets all unset values and vice versa.
+Negates the bitmask. Sets all unset values and vice versa.
 
 Returns the object.
 
@@ -832,6 +834,8 @@ a value)
 Bitmask::Data adds a considerable processing overhead (especially when 
 the bitmask_complex option is enabled) to bitmask manipulations. If you don't
 need the extra comfort please use the perl built in bit operators.
+
+Bitmask length is limited to 32 (respectively 64 on 64-bit perl).
 
 =head1 SUBCLASSING
 
