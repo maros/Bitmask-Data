@@ -1,8 +1,8 @@
 # -*- perl -*-
 
-# t/004_basic.t - check basic stuff
+# t/basic.t - check exceptions
 
-use Test::More tests=>15;
+use Test::More tests=>17;
 use Test::Warn;
 use Test::NoWarnings;
 
@@ -45,7 +45,30 @@ eval {
 };
 like($@,qr/Bitmask length not set/);
 
+Exceptionmask->bitmask_length(-1);
+eval {
+    Exceptionmask->init(
+        'hase',
+        'baer',
+        'luchs'
+    );
+};
+like($@,qr/Bitmask length not set/);
+
 Exceptionmask->bitmask_length(4);
+Exceptionmask->bitmask_default(16);
+Exceptionmask->bitmask_items({});
+eval {
+    Exceptionmask->init(
+        'hase'  => 1,
+        'baer'  => 2,
+        'luchs' => 4,
+        'eber'  => 8,
+    );
+};
+like($@,qr/<16> exceeds maximum lenth of 4/);
+
+Exceptionmask->bitmask_default(undef);
 
 warnings_like {
     Exceptionmask->init(

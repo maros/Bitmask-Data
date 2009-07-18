@@ -1,8 +1,8 @@
 # -*- perl -*-
 
-# t/009_overload.t - overload
+# t/overload.t - overload params
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::NoWarnings;
 
 use strict;
@@ -15,7 +15,7 @@ my $tm1 = Testmask5->new('value2');
 my $tm2 = Testmask5->new('value1','value5');
 
 is($tm2,'10001','Stringify');
-ok((0+$tm1) == 1,'Numify');
+ok((0+$tm1) == 2,'Numify');
 
 my $tm3 = $tm1 + $tm2;
 isa_ok($tm3,'Testmask5');
@@ -57,6 +57,9 @@ is($tm6->string,'10011','Bitmask has been updated correctly');
 
 $tm6 ^= '0b01010';
 is($tm6->string,'11001','Bitmask has been updated correctly');
+
+my $tm9 = ~ $tm6;
+is($tm9->string,'00110','New bitmask is correct');
 
 
 #ok(Testmask5->new('value1') == 1);

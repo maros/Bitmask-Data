@@ -1,12 +1,14 @@
 # -*- perl -*-
 
-# t/004_testmask1.t - check testmask 1
+# t/testmask1.t - check testmask 1
 
-use Test::More tests=>48;
+use Test::More tests=>57;
 use Test::NoWarnings;
 
 use strict;
 use warnings;
+
+use Math::BigInt;
 
 use lib qw(t/lib);
 use_ok( 'Testmask1' );
@@ -22,18 +24,18 @@ is($tm->length,0);
 is($tm2->length,1);
 ok($tm->add('value1',2));
 ok($tm2->add('value1'));
-is($tm->hasall('value1','value2'),1);
-is($tm2->hasall('value1','value4'),1);
-is($tm->hasany('value1'),1);
-is($tm->hasany('value3'),0);
-is($tm->hasany('value3'),0);
-is($tm->hasall('value1'),1);
-is($tm->hasexact('value1'),0);
-is($tm->hasexact('value1','value2'),1);
-is($tm->hasexact('value1','value4'),0);
-is($tm->hasexact('value1','value2','value5'),0);
-is($tm2->hasexact('value1'),0);
-is($tm->hasall('value1','value2','value3'),0);
+is($tm->has_all('value1','value2'),1);
+is($tm2->has_all('value1','value4'),1);
+is($tm->has_any('value1'),1);
+is($tm->has_any('value3'),0);
+is($tm->has_any('value3'),0);
+is($tm->has_all('value1'),1);
+is($tm->has_exact('value1'),0);
+is($tm->has_exact('value1','value2'),1);
+is($tm->has_exact('value1','value4'),0);
+is($tm->has_exact('value1','value2','value5'),0);
+is($tm2->has_exact('value1'),0);
+is($tm->has_all('value1','value2','value3'),0);
 is($tm->length,2);
 is($tm->integer,0b0000000000000011);
 ok($tm->add('value3','value7'));
@@ -46,9 +48,14 @@ is($tm->length,2);
 is($tm->integer,0b1000000000001000);
 is($tm->first,'value7');
 is($tm->string,'1000000000001000');
-my @sqlsearch = $tm->sqlfilter('field');
-is($sqlsearch[0],"bitand( field, B'1000000000001000' )");
-is(${$sqlsearch[1]}," = B'1000000000001000'");
+my @sqlsearch1 = $tm->sqlfilter_all('field');
+is($sqlsearch1[0],"bitand( field, B'1000000000001000' )");
+is(${$sqlsearch1[1]}," = B'1000000000001000'");
+
+my @sqlsearch2 = $tm->sqlfilter_any('field');
+is($sqlsearch2[0],"bitand( field, B'1000000000001000' )");
+is(${$sqlsearch2[1]}," = TRUE");
+
 $tm->reset;
 is($tm->length,0);
 ok($tm->add(0b1000000000111111));
@@ -60,9 +67,20 @@ is($tm->integer,0b0000000000111010);
 $tm->set([0b0000000000000010],[0b0000000000100010]);
 is($tm->integer,0b0000000000100010);
 $tm->add($tm2);
-ok($tm->hasany('value4'));
+ok($tm->has_any('value4'));
 my $tm3 = $tm->clone();
 $tm->remove('value4');
-ok(! $tm->hasany('value4'));
-ok($tm3->hasany('value4'));
+ok(! $tm->has_any('value4'));
+ok($tm3->has_any('value4'));
 is($tm->length + 1,$tm3->length);
+
+my $tm4 = Testmask1->new();
+is($tm4->first,undef);
+$tm4->add($tm2,Math::BigInt->new('256'));
+is($tm4->first,'value1');
+my $list = $tm4->list();
+is($tm4->length,3);
+ok('value1' ~~ $list);
+ok('value4' ~~ $list);
+ok('value9' ~~ $list);
+is($tm4->bitmask,"\0\0\0\0\0\0\0\1\0\0\0\0\0\1\0\1");

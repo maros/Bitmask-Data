@@ -1,6 +1,6 @@
 # -*- perl -*-
 
-# t/007_testmask3.t - check testmask 3
+# t/testmask3.t - check testmask 3
 
 use Test::More tests => 7;
 use Test::NoWarnings;

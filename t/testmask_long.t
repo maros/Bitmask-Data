@@ -1,6 +1,6 @@
 # -*- perl -*-
 
-# t/010_long.t - bitmasks with 64 items
+# t/long.t - bitmasks with 100 bits
 
 use Test::More;
 

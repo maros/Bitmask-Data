@@ -240,7 +240,7 @@ sub init {
 
         given ( $params[0] // '' ) {
             when (ref $_ eq 'Math::BigInt') {
-                $bit = shift(@params)->as_bin();
+                $bit = $class->string2bit(shift(@params)->as_bin());
             }
             when (m/^\d+$/) {
                 $bit = $class->int2bit(shift(@params));
@@ -250,6 +250,7 @@ sub init {
             }
             when (m/^[$ZERO$ONE]+$/) {
                 $bit = shift(@params);
+                $bit = $ZERO x ($length - length($bit)) . $bit;
             }
             default {
                 carp( "Lazy bitmask initialization detected: Please enable"
@@ -278,6 +279,8 @@ sub init {
 
     $class->bitmask_full($bitmask_full);
     $class->bitmask_items($items);
+    $class->bitmask_default($class->any2bitmask($class->bitmask_default))
+        if defined $class->bitmask_default;
     return;
 }
 
@@ -385,7 +388,7 @@ sub any2bitmask {
 
 =head3 _parse_params
 
-    CLASS->_parse_params(LIST)
+    my $bitmask_string = CLASS->_parse_params(LIST)
 
 Helper method for parsing params passed to various methods.
 
