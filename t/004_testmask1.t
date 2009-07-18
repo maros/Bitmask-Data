@@ -2,7 +2,7 @@
 
 # t/004_testmask1.t - check testmask 1
 
-use Test::More tests=>52;
+use Test::More tests=>48;
 use Test::NoWarnings;
 
 use strict;
@@ -35,16 +35,16 @@ is($tm->hasexact('value1','value2','value5'),0);
 is($tm2->hasexact('value1'),0);
 is($tm->hasall('value1','value2','value3'),0);
 is($tm->length,2);
-is($tm->mask,0b0000000000000011);
+is($tm->integer,0b0000000000000011);
 ok($tm->add('value3','value7'));
 is($tm->length,4);
 ok($tm->add(2));
 is($tm->length,4);
-is($tm->mask,0b1000000000001011);
+is($tm->integer,0b1000000000001011);
 ok($tm->remove(0b0000000000000011));
 is($tm->length,2);
-is($tm->mask,0b1000000000001000);
-is($tm->first,'value3');
+is($tm->integer,0b1000000000001000);
+is($tm->first,'value7');
 is($tm->string,'1000000000001000');
 my @sqlsearch = $tm->sqlfilter('field');
 is($sqlsearch[0],"bitand( field, B'1000000000001000' )");
@@ -53,12 +53,12 @@ $tm->reset;
 is($tm->length,0);
 ok($tm->add(0b1000000000111111));
 is($tm->length,7);
-is($tm->mask,0b1000000000111111);
+is($tm->integer,0b1000000000111111);
 ok($tm->remove(32768,[ 0b0000000000000101 ]));
 is($tm->length,4);
-is($tm->mask,0b0000000000111010);
+is($tm->integer,0b0000000000111010);
 $tm->set([0b0000000000000010],[0b0000000000100010]);
-is($tm->mask,0b0000000000100010);
+is($tm->integer,0b0000000000100010);
 $tm->add($tm2);
 ok($tm->hasany('value4'));
 my $tm3 = $tm->clone();
@@ -66,9 +66,3 @@ $tm->remove('value4');
 ok(! $tm->hasany('value4'));
 ok($tm3->hasany('value4'));
 is($tm->length + 1,$tm3->length);
-
-# Utility functions
-is(Testmask1->bit2data(0b0000000000000010),'value2');
-is(Testmask1->bit2data(0b0100000000000000),undef);
-is(Testmask1->data2bit('value2'),0b0000000000000010);
-is(Testmask1->data2bit('novalue'),undef);

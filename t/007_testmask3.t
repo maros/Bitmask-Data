@@ -15,7 +15,7 @@ my $tm = Testmask3->new();
 
 $tm->setall;
 is($tm->length,3);
-is($tm->mask,7);
+is($tm->integer,7);
 $tm->remove('w');
 is($tm->length,2);
 is($tm->string,'101');

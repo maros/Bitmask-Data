@@ -12,7 +12,7 @@ __PACKAGE__->init(
     'value3' => 0x8000, #16
     'value4' => 0x4, #3
     'value5', # 5
-    'value6', # 6 
+    'value6' => '0b0100000', # 6 
     'value7' => 8, #4
 );
 
