@@ -1,38 +1,48 @@
 Revision history for Perl module Bitmask::Data
 
-1.08	2008-12-15 12:29:33
+2.00 ?? Jul ?? 2009
+    - ATTENTION: bitmask_complex option is not supported anymore
+    - Complete rewrite using strings with "\0" and "\1" as internal data format
+    - Support for unlimited length bitmasks
+    - Renamed methods 'hasany', 'hasall' and 'hasexact' to 
+      'has_any', 'has_all' and 'has_exact'
+    - Removed/renamed/added some internal methods
+    - Changed error messages
+    - More overloaded operators
+    
+1.08 Mon Dec 15 2008
     - due to git-repo-name missmatches I didn't get all updates, so: yet another release
       (Thomas Klausner)
 
-
-1.07	2008-12-15 12:26:29
+1.07 Mon Dec 15 2008
     - Removed extra overload param (Maros Kollar)
     - fix typo in perldoc (Klaus Ita)
 
 1.06 Fri Oct 3 2008
-    - More overload methods
-    - Added additional tests
-    - Neg method
+    - More overload methods (Maros Kollar)
+    - Added additional tests (Maros Kollar)
+    - Neg method (Maros Kollar)
 
 1.05 Fri Aug 30 2008
-    - Added additional tests
-    - Better support for overlapping complex bitmasks 
-    - Clone and additional search/compare methods
+    - Added additional tests (Maros Kollar)
+    - Better support for overlapping complex bitmasks (Maros Kollar)
+    - Clone and additional search/compare methods (Maros Kollar)
     
 1.04 Fri Aug 30 2008
-    - Maintenance release
-    - Added tests 
+    - Maintenance release (Klaus Ita)
+    - Added more tests (Maros Kollar)
     
 1.03 Mon Jun 16 2008
-    - Maintenance release
+    - Maintenance release (Maros Kollar)
     
 1.02 Mon Jun 16 2008
-    - Fixed warning in test
-    - Test for warnings
+    - Fixed warning in test  (Maros Kollar)
+    - cleanup Bit parsing via opt/int (Klaus Ita)
+    - Test for warnings  (Maros Kollar)
     
 1.01 Mon Jun 02 2008
-    - Added changelog
-    - Fixed typos and wrong markup in pod
+    - Added changelog  (Maros Kollar)
+    - Fixed typos and wrong markup in pod  (Maros Kollar)
     
 1.00 Thu May 29 2008
-    - original version
+    - original version (Klaus Ita & Maros Kollar) 
