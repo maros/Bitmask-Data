@@ -9,59 +9,18 @@ use 5.010;
 
 use Carp;
 use List::Util qw(reduce);
+use Scalar::Util qw(blessed);
 
-our $VERSION = '1.08';
+our $VERSION = version->new('2.00');
 
-use overload 
-    '0+'    => 'mask',
-    '""'    => 'string',
-    '<=>'   => sub {
-        my ($self,$value,$order) = @_;
-        $value = $value->mask
-            if ref $value && $value->isa('Bitmask::Data');
-        $self = $self->mask;
-        return ($order) ? 
-            $self <=> $value :
-            $value <=> $self;
-    },
-    'cmp'   => sub {
-        my ($self,$value,$order) = @_;
-        $value = $value->string
-            if ref $value && $value->isa('Bitmask::Data');
-        $self = $self->string;
-        return ($order) ? 
-            $self cmp $value :
-            $value cmp $self;
-    },
-    '+='     => sub {
-        my ($self,$value) = @_;
-        return $self->add($value);
-    },
-    '-='     => sub {
-        my ($self,$value) = @_;
-        return $self->remove($value);
-    },
-    '|'     => sub {
-        my ($self,$value) = @_;
-        return $self->mask | $value; 
-    },
-    '^'     => sub {
-        my ($self,$value) = @_;
-        return $self->mask ^ $value; 
-    };
-    
-    
-__PACKAGE__->mk_classdata( bitmask_length   => 16 );
-__PACKAGE__->mk_classdata( bitmask_items    => {} );
-__PACKAGE__->mk_classdata( bitmask_default  => undef );
-__PACKAGE__->mk_classdata( bitmask_complex  => 0 );
-__PACKAGE__->mk_classdata( bitmask_lazyinit => 0 );
+our $ZERO = chr(0);
+our $ONE = chr(1);
 
 =encoding utf8
 
 =head1 NAME
 
-Bitmask::Data - Handle bitmasks in an easy and flexible way
+Bitmask::Data - Handle unlimited length bitmasks in an easy and flexible way
 
 =head1 SYNOPSIS
 
@@ -69,20 +28,21 @@ Bitmask::Data - Handle bitmasks in an easy and flexible way
  package MyBitmask;
  use base qw(Bitmask::Data);
  __PACKAGE__->bitmask_length(18);
- __PACKAGE__->bitmask_default(0b000000000000000011);
+ __PACKAGE__->bitmask_default('0b000000000000000011');
  __PACKAGE__->init(
-    'value1' => 0b000000000000000001,
-    'value2' => 0b000000000000000010,
-    'value2' => 0b000000000000000100,
-    'value4' => 0b000000000000001000,
-    'value5' => 0b000000000000010000,
+    'value1' => '0b000000000000000001',
+    'value2' => '0b000000000000000010',
+    'value2' => '0b000000000000000100',
+    'value4' => '0b000000000000001000',
+    'value5' => '0b000000000000010000',
     ...
  );
  
  ## Somewhere else in your code
  use MyBitmask;
  my $bm = MyBitmask->new('value1','value3');
- $bm->mask;
+ $bm->add('value3');
+ $bm->string;
 
 =head1 DESCRIPTION
 
@@ -92,7 +52,12 @@ with a single bitmask in a simple application you might also initialize
 the bitmask directly in the Bitmask::Data module).
 
 After the initialization you can create an arbitrary number of bitmask 
-objects which can be accessed and manipulated with convenient methods.
+objects which can be accessed and manipulated with convenient methods and
+overloaded operators.
+
+Bitmask::Data does not store bitmasks as integers internally, but as 
+strings conststing of \0 and \1, hence makinging unlimited length bitmasks
+possible (perl can handle integer bitmasks only up to 40 bits).
 
 =head1 METHODS
 
@@ -103,7 +68,7 @@ objects which can be accessed and manipulated with convenient methods.
 Set/Get the length of the bitmask. Changing this value after the 
 initialization is not recommended.
 
-Bitmask length is limited to 32 (respectively 64 on 64-bit perl).
+Bitmask length is unlimited.
 
 Default: 16
 
@@ -112,47 +77,6 @@ Default: 16
 Set/Get the default bitmask for empty Bitmask::Data objects.
 
 Default: undef
-
-=head3 bitmask_complex
-
-Boolean value that enables/disables checks for composed bitmasks. If false
-init will only accept bitmask bit values that are powers of 2. 
-
-Default: 0
-
-Complex bitmask also allow the creation of overlapping bitmask values:
- 
- packacke LocaleBitmask;
- use base qw(Bitmask::Data);
- __PACKAGE__->bitmask_length(8); # 8 bits
- __PACKAGE__->bitmask_complex(1); # enable overlapping bitmasks
- __PACKAGE__->init(
-    AT      => 0b000_00001, # Austria
-    CH      => 0b000_00010, # Switzerland
-    DE      => 0b000_00100, # Germany
-    FR      => 0b000_01000, # France
-    IT      => 0b000_10000, # Italy
-    
-    de      => 0b001_00000, # German
-    fr      => 0b010_00000, # French
-    it      => 0b100_00000, # Italian
-    
-    de_AT   => 0b001_00001, # German / Austria
-    de_CH   => 0b001_00010, # German / Switzerland
-    de_DE   => 0b001_00100, # German / Germany
-    fr_CH   => 0b010_00010, # French / Switzerland
-    fr_FR   => 0b010_01000, # French / France
-    it_CH   => 0b100_00010, # Italian / Switzerland    
-    it_IT   => 0b100_10000, # Italian / Italy
- );
- 
- # Somewhere else
- 
- LocaleBitmask->new('de')->hasany('de'); # true
- LocaleBitmask->new('de')->hasany('de_DE'); # true ('de' matches)
- LocaleBitmask->new('de')->hasall('de_DE'); # false
- LocaleBitmask->new('de_DE','de_AT','de_CH')->hasexact('de','AT','DE','CH'); # true
- LocaleBitmask->new('de_DE','de_AT','de_CH')->list # de,DE,de_DE,de_AT,AT,de_CH,CH
 
 =head3 bitmask_lazyinit
 
@@ -170,8 +94,15 @@ Default: 0
 
 =head3 bitmask_items
 
-HASHREF of all bitmask items. Don't mess around here unless you know 
-what you are doing.
+HASHREF of all bitmask items.
+
+=head3 bitmask_empty
+
+Empty bitmask.
+
+=head3 bitmask_full
+
+Bitmask with all bits set.
 
 =head3 init
 
@@ -198,184 +129,258 @@ With C<bitmask_lazyinit> enabled you can also skip the bitmask bit values
         'value4',
     );
 
+Bits may be supplied as integers, strings or Math::BigInt objects 
+(not recommended) strings
+
+    CLASS->init(
+        'value1' => 0b000001,               # integer
+        'value2' => 2,                      # integer
+        'value3' => '0b000100'              # string starting with '0b'
+        'value4' => '0B001000'              # string starting with '0B'
+        'value5' => '\0\1\0\0\0\0'          # string consisting of \0 and \1
+        'value6' => Math::BigInt->new("32") # Math::BigInt object
+    );
+
 =cut
 
+__PACKAGE__->mk_classdata( bitmask_length   => 16 );
+__PACKAGE__->mk_classdata( bitmask_items    => {} );
+__PACKAGE__->mk_classdata( bitmask_default  => undef );
+__PACKAGE__->mk_classdata( bitmask_lazyinit => 0 );
+__PACKAGE__->mk_classdata( bitmask_empty    => undef );
+__PACKAGE__->mk_classdata( bitmask_full     => undef );
+
+use overload 
+    'bool'  => sub {
+         my ($self) = @_; 
+         return ($self->{bitmask} ne $self->bitmask_empty) ? 1:0;
+    },
+    '0+'    => 'integer',
+    '""'    => 'string',
+    '<=>'   => '_compare',
+    'cmp'   => '_compare',
+    '+='    => 'add',
+    '-='    => 'remove',
+    '+'     => sub {
+        my ($self,$value) = @_;
+        return $self->clone->add($value);
+    },
+    '-'     => sub {
+        my ($self,$value) = @_;
+        return $self->clone->remove($value);
+    },
+    '&'     => sub {
+        my ($self,$value) = @_;
+        my $bitmask = $self->any2bitmask($value);
+        return $self->new_from_bitmask($self->{bitmask} & $bitmask);
+    },
+    '^'     => sub {
+        my ($self,$value) = @_;
+        my $bitmask = $self->any2bitmask($value);
+        return $self->new_from_bitmask($self->{bitmask} ^ $bitmask);
+    },
+    '|'     => sub {
+        my ($self,$value) = @_;
+        my $bitmask = $self->any2bitmask($value);
+        return $self->new_from_bitmask($self->{bitmask} | $bitmask);
+    },    
+    '&='    => sub {
+        my ($self,$value) = @_;
+        my $bitmask = $self->any2bitmask($value);
+        $self->{bitmask} &= $bitmask;
+        return $self;
+    },
+    '^='    => sub {
+        my ($self,$value) = @_;
+        my $bitmask = $self->any2bitmask($value);
+        $self->{bitmask} ^= $bitmask;
+        return $self;
+    },
+    '|='    => sub {
+        my ($self,$value) = @_;
+        my $bitmask = $self->any2bitmask($value);
+        $self->{bitmask} |= $bitmask;
+        return $self;
+    },  
+    "~"     => sub {
+        my ($self) = @_;
+        return $self->clone->neg();
+    };
+    
+sub _compare {
+    my ($self,$value,$order) = @_;
+    my $bitmask = $self->any2bitmask($value);
+    return ($order) ? 
+        $self->{bitmask} cmp $bitmask :
+        $bitmask cmp $self->{bitmask};
+}
+
 sub init {
-    my $class = shift;
+    my ($class,@params) = @_;
 
     my $length = $class->bitmask_length;
 
     croak('Bitmask length not set')
-        unless $length;
+        unless $length && $length > 0;
+        
+    $class->bitmask_empty($ZERO x $length);
 
     my $items = {};
     my $count = 0;
+    my $bitmask_full = $class->bitmask_empty();
     
-    # Take first element from @_
-    while (my $name = shift @_) {
-        my $bit;
+    # Take first element from @params
+    while (my $name = shift(@params)) {
+        my ($bit,$bit_readable);
 
         $count++;
-
-        croak( 'Too many values in bitmask: max ' . $class->bitmask_length )
+        
+        croak(sprintf('Too many values in bitmask: max <%i>',$class->bitmask_length))
             if $count > $class->bitmask_length;
 
-        given ( $_[0] // '' ) {
-            when (m/^\d+$/) {
-                $bit = shift @_;
+        given ( $params[0] // '' ) {
+            when (ref $_ eq 'Math::BigInt') {
+                $bit = shift(@params)->as_bin();
             }
-            when (m/\A(?:0b)?([01]{$length})\Z/) {
-                $bit = oct('0b' . $1);
-				shift @_;
+            when (m/^\d+$/) {
+                $bit = $class->int2bit(shift(@params));
+            }
+            when (m/^(?:0[bB])?[01]+$/) {
+                $bit = $class->string2bit(shift(@params));
+            }
+            when (m/^[$ZERO$ONE]+$/) {
+                $bit = shift(@params);
             }
             default {
                 carp( "Lazy bitmask initialization detected: Please enable"
                         . " <bitmask_lazyinit> or change init parameters" )
                     unless ( $class->bitmask_lazyinit );
-                $bit = 2**( $count - 1 );
+                $bit = $class->bitmask_empty;
+                substr($bit,($length-$count),1,$ONE);
             }
         }
 
-        $class->_check_bit($bit)
-            or croak( 'Invalid bit value: ' . $bit );
+        $bit_readable = $bit;
+        $bit_readable =~ tr/\0\1/01/;
+        
+        croak(sprintf('Invalid bit value <%s>',$bit_readable))
+            unless $bit =~ /^[$ZERO$ONE]{$length}$/;
 
-        croak( 'Value already in bitmask: ' . $name )
+        croak(sprintf('Duplicate value <%s> in bitmask',$name))
             if exists $items->{$name};
 
-        croak( 'Bit already in bitmask: ' . $bit )
-            if grep { $class->bitmask_complex ? ($_ eq $bit) : ($_ & $bit) } values %{$items};
+        croak(sprintf('Duplicate bit <%s> in bitmask',$bit_readable))
+            if grep { ($_ & $bit) ne $class->bitmask_empty } values %{$items};
 
+        $bitmask_full |= $bit;
         $items->{$name} = $bit;
     }
 
+    $class->bitmask_full($bitmask_full);
     $class->bitmask_items($items);
     return;
 }
 
-sub _check_bit {
-    my $class = shift;
-    my $bit   = shift;
+=head3 int2bit
 
-    return 1 if $bit == 0;
+    my $bitmask_string = CLASS->int2bit(INTEGER);
 
-    # Check it it is a power of 2 or complex
-    return 0 if !$class->bitmask_complex && $bit & ( $bit - 1 );
-
-    # Get bit length
-    my $value = int( log($bit) / log(2) );
-
-    # Reject too long values
-    return 0 if ( $value >= $class->bitmask_length );
-
-    return 1;
-}
-
-=head3 data2bit
-
-    CLASS->data2bit(VALUE);
-
-Returns the corresponding bit for the given value.
+Helper method that turns an integer into the internal bitmask representation
 
 =cut
 
-sub data2bit {
-    my ( $class, $value ) = @_;
-    return
-        exists $class->bitmask_items->{$value}
-        ? $class->bitmask_items->{$value}
-        : undef;
-}
-
-=head3 bit2data
-
-    CLASS->bit2data(BIT);
-
-Returns the corresponding value for the given bit.
-
-=cut
-
-sub bit2data {
-    my ( $class, $bit ) = @_;
-    while ( my @item = each %{ $class->bitmask_items } ) {
-        return $item[0]
-            if $item[1] == $bit;
-    }
-    return undef;
-}
-
-=head3 bm2data
-
-    CLASS->bm2data(BITMASK);
-
-Returns all the value for the given bitmask.
-
-=cut
-
-sub bm2data {
-    my ( $class, $bitmask ) = @_;
-
-    die "Invalid bitmask value <$bitmask>"
-        if ( $bitmask > ( 2**$class->bitmask_length ) - 1 );
-
-    my @result;
-    my $items = $class->bitmask_items;
-
-    my $check = 0;
-    $check = $_ | $check foreach ( values %{$items} );
-    die "Invalid bitmask items <$bitmask>"
-        if ( $bitmask & ~$check );
-
-    if ( $class->bitmask_complex ) {
-        my %bm;
-        @bm{ values %$items } = keys %$items;
-        my @all = map { $_ & $bitmask } keys %bm;
-        my @bitmasks = grep { $_ ~~ %bm } @all;
-        @result = @bm{@bitmasks};
-    }
-    else {
-        @result = grep { $items->{$_} & $bitmask } keys %{$items};
-    }
-
-    return wantarray ? @result : \@result;
-}
-
-=head3 any2data
-
-    CLASS->any2data(124); # Bitmask
-    CLASS->any2data('de_DE'); # Value
-    CLASS->any2data(0b110001001); # Bitmask in bit notation
-    CLASS->any2data('0B110001001'); # Bitmask string
-    CLASS->any2data('0b111000001'); # Bitmask string
-
-Turns a single value (bit, bitmask,value, bitmask string) into a value.
-
-=cut
-
-sub any2data {
-    my ( $class, $any ) = @_;
-
-    my $bl = $class->bitmask_length;
-    my @data;
+sub int2bit {
+    my ($class,$integer) = @_;
     
+    my $bitmask = sprintf( '%0' . $class->bitmask_length . 'b', $integer );
+    $bitmask =~ tr/01/\0\1/;
+    return $bitmask;
+}
+
+=head3 string2bit
+
+    my $bitmask_string = CLASS->string2bit(STRING);
+
+Helper method that takes a string like '0B001010' or '0b010101' and turns it 
+into the internal bitmask representation
+
+=cut
+
+sub string2bit {
+    my ($class,$string) = @_;
+
+    $string =~ s/^0[bB]//;
+    $string = sprintf( '%0' . $class->bitmask_length . 's', $string );
+    $string =~ tr/01/\0\1/;
+    return $string;
+}
+
+=head3 any2bitmask
+
+    my $bitmask_string = CLASS->any2bitmask(ANYTHING);
+
+Helper method that tries to turn a data into the internal bitmask 
+representation. This method can hanle
+
+=over
+
+=item * any Bitmask::Data object
+
+=item * Math::BigInt object
+
+=item * a string matching on of the bitmask values
+
+=item * a bitmask string consisting of \0 and \1 characters
+
+=item * a bitmask string starting with '0b' or '0B' and containing only 0 and 1
+
+=item * an integer
+
+=back
+
+=cut
+
+sub any2bitmask {
+    my ($class,$param) = @_;
+
     croak "Bitmask, Item or integer expected"
-        unless defined $any;
-    
-    given ($any) {
-        when ( %{ $class->bitmask_items } ) {
-            @data = ($any);
+        unless defined $param;
+
+    my $bit;    
+    given ($param) {
+        when (blessed $param && $param->isa('Bitmask::Data')) {
+            $bit = $param->{bitmask};
         }
-        when (m/\A0[bB]([01]{$bl})\Z/) {
-            @data = ( $class->bm2data( oct("0b$1") ) );
+        when (blessed $param && $param->isa('Math::BigInt')) {
+            $bit = $class->string2bit($param->as_bin());
         }
-        when (m/\A\d+\Z/) {
-            @data = ( $class->bm2data($any) );
+        when ($param ~~ $class->bitmask_items) {
+            $bit = $class->bitmask_items->{$param};
+        }
+        when (m/^[$ZERO$ONE]+$/) {
+            $bit = $param;
+        }
+
+        when (m/^(?:0b)?[01]+$/) {
+            $bit = $class->string2bit($param);
+        }
+        when (m/^\d+$/) {
+            $bit = $class->int2bit($param);
         }
         default {
-            die "Could not turn <$any> into something meaningful";
-        };
+            croak sprintf('Could not turn <%s> into something meaningful',$param);
+        }
+    }
+    
+    if (length $bit > $class->bitmask_length) {
+        croak sprintf('<%s> exceeds maximum lenth of %i',$param,$class->bitmask_length);
+    }
+    
+    if (($class->bitmask_full | $bit) ne $class->bitmask_full) {
+        croak sprintf('<%s> tries to set undefined bits',$param);
     }
 
-    return @data;
+    return $bit;
 }
 
 =head3 _parse_params
@@ -387,40 +392,26 @@ Helper method for parsing params passed to various methods.
 =cut
 
 sub _parse_params {
-    my ( $class, @args ) = @_;
-
-    my @data = ();
-    foreach my $param (@args) {
-        next unless defined $param;
-        my @tmp;
+    my ($class,@params) = @_;
+    
+    my $result_bitmask = $class->bitmask_empty;
+    
+    foreach my $param (@params) {
+        next 
+            unless defined $param;
+            
+        my $bitmask;
         if ( ref $param eq 'ARRAY' ) {
-            push( @tmp, $class->_parse_params(@$param) );
-        }
-        elsif (ref $param
-            && $param->isa( ref $class || $class )
-            && $param->can('list') )
-        {
-            push( @tmp, $param->list );
+            $bitmask = $class->_parse_params(@$param);
         }
         else {
-            push( @tmp, $class->any2data($param) );
+            $bitmask = $class->any2bitmask($param);
         }
 
-        foreach my $item (@tmp) {
-            if ( $class->bitmask_complex ) {
-                foreach ($class->bm2data($class->data2bit($item))) {
-                    push @data, $_
-                        unless $_ ~~ \@data;
-                }
-            } else {
-                push @data, $item
-                    unless $item ~~ \@data;
-            }
-        }
-
+        $result_bitmask = $result_bitmask | $bitmask;
     }
 
-    return @data;
+    return $result_bitmask;
 }
 
 =head2 Overloaded operators
@@ -431,57 +422,54 @@ Bitmask::Data uses overload by default.
 
 =item * Numeric context
 
-Returns bitmask integer value (see L<mask> method)
+Returns bitmask integer value (see L<integer> method). For large bitmasks 
+(> 40) this will be a L<Math::BigInt> object
 
 =item * Scalar context
 
 Returns bitmask string representation (see L<string> method)
 
-=item * String comparison
+=item * Comparison
 
-=item * Numeric comparison
+=item * +, -
 
-=item * -=
+Adds/Removes bits to/from the bitmask without changing the current object.
+The result is returned as a new Bitmask::Data object.
 
-Removes bitmask value (see L<remove> method)
+=item * -=, +=
 
-=item * +=
+Adds/Removes bits to/from the current bitmask object.
 
-Adds bitmask value (see L<ass> method)
 
 =item * ~, ^, &, |
 
-Performs the bit operations on the bitmask
+Performs the bitwise operations without changing the current object. 
+The result is returned as a new Bitmask::Data object.
+
+=item * ^=, &=, |=
+
+Performs the bitwise operations on the current bitmask object.
 
 =back
 
-=head2 Public Methods
+=head2 Constructors
 
 =head3 new
 
     my $bm = MyBitmask->new();
     my $bm = MyBitmask->new('value1');
-    my $bm = MyBitmask->new('value2', 'value3');
     my $bm = MyBitmask->new('0b00010000010000');
     my $bm = MyBitmask->new(124);
     my $bm = MyBitmask->new(0b00010000010000);
     my $bm = MyBitmask->new(0x2);
+    my $bm = MyBitmask->new($another_bm_object);
+    my $bm = MyBitmask->new("\0\1\0\0\1");
+    my $bm = MyBitmask->new('value2', 'value3');
     my $bm = MyBitmask->new([32, 'value1', 0b00010000010000]);
 
 Create a new bitmask object. You can supply almost any combination of 
-bits, bitmasks and values, even mix different types. 
-
-=over
-
-=item * LIST or ARRAYREF of values
-
-=item * LIST or ARRAYREF of strings representing bits or bitmasks (starting with '0b')
-
-=item * LIST or ARRAYREF of bitmasks
-
-=item * Any combination of the above
-
-=back
+bits, Bitmask::Data objects, bitmasks and values, even mix different types.
+See L<any2bitmask> for details on possible formats.
 
 =cut
 
@@ -491,35 +479,62 @@ sub new {
     croak('Bitmask not initialized')
         unless scalar keys %{ $class->bitmask_items };
 
-    my $self = bless { _data => [], }, $class;
+    my $self = $class->new_from_bitmask($class->bitmask_empty);
 
-    $self->set( @args );
+    if (scalar @args) {
+        $self->set( @args );
+    } else {
+        $self->set( $class->bitmask_default );    
+    }
 
     return $self;
 }
 
+=head3 new_from_bitmask
+
+    my $bm = MyBitmask->new_from_bitmask($bitmask_string);
+
+Create a new bitmask object from a bitmask string (as returned by many
+helper methods).
+
+=cut
+
+sub new_from_bitmask {
+    my ( $class, $bitmask ) = @_;
+    
+    $class = ref($class)
+        if ref($class);
+    
+    my $self = bless {
+        cache   => undef,
+        bitmask => $bitmask, 
+    },$class;
+    
+    return $self;
+}
+
+=head2 Public Methods
+
 =head3 clone
 
-    $bm2 = $bm->clone();
-    
-Clones a bitmask object
+    my $bm_new = $bm->clone();
+
+Clones an existing Bitmask::Data object and.
 
 =cut
 
 sub clone {
     my ( $self ) = @_;
-
-    my $new = bless { _data => \ @{$self->{_data}}, }, ref $self;
     
-    return $new;
+    return $self->new_from_bitmask($self->{bitmask});
 }
 
 =head3 set
 
-    $bm->set(ITEMS);
+    $bm->set(PARAMS);
     
-This method takes the same arguments as C<new>. It resets the current bitmask
-and sets the supplied arguments. 
+This methpd resets the current bitmask and sets the supplied arguments. 
+Takes the same arguments as C<new>. 
 
 Returns the object.
 
@@ -528,67 +543,18 @@ Returns the object.
 sub set {
     my ( $self, @args ) = @_;
 
-    $self->{_data} = [];
-    $self->add(@args);
+    $self->{bitmask} = $self->bitmask_empty;
+    $self->add( @args );
 
-    unless ( scalar @{ $self->{_data} } ) {
-        $self->add( $self->bitmask_default )
-            if defined $self->bitmask_default;
-    }
-    
     return $self;
 }
 
-=head3 list
+=head3 remove 
 
-    $bm->list()
-
-In list context, this returns a list of the set values in scalar context, 
-this returns an array reference to the list of values.
-
-=cut
-
-sub list {
-    my $self = shift;
-    my $data = $self->{_data} // [];
-    return wantarray ? @$data : $data;
-}
-
-=head3 length
-
-    $bm->length()
-
-Number of set bitmask values.
-
-=cut
-
-sub length {
-    my $self = shift;
-    my $data = $self->{_data} // [];
-    return scalar @{$data};
-}
-
-=head3 first 
-
-    $bm->first()
+    $bm->remove(PARAMS)
     
-Returns the first set value (the order of the values is determined by the 
-sequence of the addition)
-
-=cut
-
-sub first {
-    my $self = shift;
-    my $data = $self->{_data} // [];
-    return $data->[0];
-}
-
-=head3 remove
-
-    $bm->remove(ITEMS);
-
-This method takes the same arguments as C<new>. The values supplied in the
-arguments will be unset.
+Removes the given values/bits from the bitmask. Takes the same arguments 
+as C<new>. 
 
 Returns the object.
 
@@ -597,50 +563,21 @@ Returns the object.
 sub remove {
     my ( $self, @args ) = @_;
 
-    my @remove = $self->_parse_params(@args);
+    my $bitmask = $self->_parse_params(@args);
 
-    $self->{_data} = [ grep { !( $_ ~~ @remove ) } @{ $self->{_data} } ];
+    $self->{bitmask} = $self->{bitmask} ^ ($self->{bitmask} & $bitmask);
+    $self->{cache} = undef;
+    
     return $self;
 }
 
-=head3 reset
 
-    $bm->reset();
+=head3 add 
 
-Unsets all values, leaving an empty list.
-
-Returns the object.
-
-=cut
-
-sub reset {
-    my ($self) = @_;
-    $self->set();
-    return $self;
-}
-
-=head3 setall
-
-    $bm->setall();
-
-Sets all values.
-
-Returns the object.
-
-=cut
-
-sub setall {
-    my ($self) = @_;
-    $self->{_data} = [ keys %{ $self->bitmask_items } ];
-    return $self;
-}
-
-=head3 add
-
-    $bm->add(ITEMS);
-
-This method takes the same arguments as C<new>. The specified values will
-be set.
+    $bm->add(PARAMS)
+    
+Adds the given values/bits to the bitmask. Takes the same arguments 
+as C<new>. 
 
 Returns the object.
 
@@ -649,19 +586,63 @@ Returns the object.
 sub add {
     my ( $self, @args ) = @_;
 
-    my @set = $self->_parse_params(@args);
+    my $bitmask = $self->_parse_params(@args);
+    
+    $self->{bitmask} = $self->{bitmask} | $bitmask;
+    $self->{cache} = undef;
 
-    my @data = $self->list;
-    push( @data, grep { !( $_ ~~ @{ $self->{_data} } ) } @set );
-    $self->{_data} = \@data;
     return $self;
 }
 
-=head3 neg
+=head3 reset 
 
-    $bm->neg();
+    $bm->reset()
+    
+Resets the bitmask to the default or empty bitmask.
 
-Negates the bitmask. Sets all unset values and vice versa.
+Returns the object.
+
+=cut
+
+sub reset {
+    my ($self) = @_;
+    
+    $self->set($self->bitmask_default || $self->bitmask_empty);
+    
+    return $self;
+}
+
+
+=head3 setall 
+
+    $bm->reset()
+    
+Sets all defined bits in the bitmask.
+
+Returns the object.
+
+=cut
+
+sub setall {
+    my ($self) = @_;
+    
+    my $bitmask = $self->bitmask_empty;
+    
+    foreach my $bit (values %{$self->bitmask_items()}) {
+        $bitmask = $bitmask | $bit;
+    }
+    $self->{bitmask} = $bitmask;
+    $self->{cache} = undef;
+    
+    return $self;
+}
+
+
+=head3 neg 
+
+    $bm->neg()
+    
+Negates/Inverts the bitmask
 
 Returns the object.
 
@@ -670,47 +651,124 @@ Returns the object.
 sub neg {
     my ( $self ) = @_;
 
-    my $new = [];
-    foreach my $item (keys %{$self->bitmask_items}) {
-        push @{$new},$item
-            unless grep {$_ eq $item} @{$self->{_data}};
-    }
-    $self->{_data} = $new;
+    $self->{bitmask} =~ tr/\0\1/\1\0/;
+    $self->{bitmask} = $self->{bitmask} & $self->bitmask_full();
+    $self->{cache} = undef;
+    
     return $self;
 }
 
-=head3 mask
+=head3 list
 
-    $bm->mask();
+    my @values = $bm->list();
+    OR
+    my $values = $bm->list();
 
-Returns the integer representing the bitmask of all the set values.
+In list context, this returns a list of the set values in scalar context, 
+this returns an array reference to the list of values.
 
 =cut
 
-sub mask {
+sub list {
     my ($self) = @_;
-    my $items = $self->bitmask_items;
-    return
-        int( ( reduce { $a | $b } map { $items->{$_} } @{ $self->{_data} } )
-        // 0 );
+    
+    my @data;
+    while (my ($value,$bit) = each %{$self->bitmask_items()}) {
+        push @data,$value
+            if (($bit & $self->{bitmask}) ne $self->bitmask_empty); 
+    }
+    return wantarray ? @data : \@data;
+}
+
+=head3 length
+
+    my $length = $bm->length();
+
+Number of set bitmask values.
+
+=cut
+
+sub length {
+    my ($self) = @_;
+    
+    my @list = $self->list;
+    return scalar @list;
+}
+
+=head3 first 
+
+    my $value = $bm->first()
+    
+Returns the first set value. The order is determined by the bit value.
+
+=cut
+
+sub first {
+    my ($self) = @_;
+    
+    my $bitmask_items = $self->bitmask_items();
+    foreach my $key (sort { $bitmask_items->{$a} cmp $bitmask_items->{$b} } keys %{$bitmask_items}) {
+        return $key
+            if (($bitmask_items->{$key} & $self->{bitmask}) ne $self->bitmask_empty); 
+    }
+    return;
+}
+
+=head3 integer
+
+    my $integer = $bm->integer();
+
+Returns the bitmask as an integer. For bitmasks with a length > 40 this will
+always be a L<Math::BigInt> object.
+
+=cut
+
+*mask = \&integer;
+sub integer {
+    my ($self) = @_;
+    
+    my $bitmask = $self->{bitmask};
+    $bitmask =~ tr/\0\1/01/;
+    
+    say('AS INTEGER');
+    
+    if ($self->bitmask_length > 40) {
+        require Math::BigInt;
+        return Math::BigInt->from_bin("0b".$bitmask);
+    } else {
+        return oct("0b".$bitmask);
+    }
 }
 
 =head3 string
 
-    $bm->string();
+    my $string = $bm->string();
 
-Retuns the string representing the bitmask.
+Returns the bitmask as a string of 0 and 1.
 
 =cut
 
 sub string {
     my ($self) = @_;
-    return sprintf( '%0' . $self->bitmask_length . 'b', $self->mask() );
+    my $bitmask = $self->{bitmask};
+    $bitmask =~ tr/\0\1/01/;
+    return $bitmask;
+}
+
+=head3 bitmask
+
+    my $string = $bm->bitmask();
+
+Returns the bitmask in the internal representation: A string of \0 and \1
+
+=cut
+
+sub bitmask {
+    my ($self) = @_;
+    return $self->{bitmask};
 }
 
 =head3 sqlfilter_all
-
-    $bm->sqlfilter_all($field);
 
 This method can be used for database searches in conjunction with 
 L<SQL::Abstract> an POSTGRESQL (SQL::Abstract is used by C<DBIx::Class> for
@@ -739,14 +797,6 @@ Example how to use sqlfilter with DBIx::Class:
 
 =cut
 
-=head3 sqlfilter
-
-Shortcut for C<sqlfilter_all>
-
-=cut
-
-*sqlfilter = \&sqlfilter_all;
-
 sub sqlfilter_all {
     my ( $self, $field ) = @_;
 
@@ -754,10 +804,9 @@ sub sqlfilter_all {
     my $format   = "bitand( $field, B'$sql_mask' )";
     return ( $format, \" = B'$sql_mask'" );
 }
+*sqlfilter = \&sqlfilter_all;
 
 =head3 sqlfilter_any
-
-    $bm->sqlfilter_any($field);
 
 Works like C<sqlfilter_all> but checks for any bit matching
 
@@ -771,59 +820,68 @@ sub sqlfilter_any {
     return ( $format, \" = TRUE" );
 }
 
+=head3 has_all
 
-=head3 hasall
+    if ($bm->has_all(PARAMS)) {
+        # Do something
+    }
 
-    $bm->hasall(ITEMS);
-
-This method takes the same arguments as C<new>. Checks if all requestes items
-are set and returns true or false.
+Checks if all requestes bits/values are set and returns true or false.
+This method takes the same arguments as C<new>. 
 
 =cut
 
-sub hasall {
+sub has_all {
     my ( $self, @args ) = @_;
 
-    my $class = ref $self;
-
-    my $mask = $class->new(@args)->mask;
+    my $bitmask = $self->_parse_params(@args);
      
-    return (($mask & $self->mask) == $mask) ? 1:0;
+    return (($bitmask & $self->{bitmask}) eq $bitmask) ? 1:0;
 }
+*hasall = \&has_all;
 
-=head3 hasexact
+=head3 has_exact
 
-    $bm->hasexact(ITEMS);
+    if ($bm->has_exact(PARAMS)) {
+        # Do something
+    }
 
-This method takes the same arguments as C<new>. Checks if the requestes items
-exactly match the set values.
+Checks if the set bits/values excactly match the supplied bits/values and 
+returns true or false.
+This method takes the same arguments as C<new>. 
 
 =cut
 
-sub hasexact {
+sub has_exact {
     my ( $self, @args ) = @_;
 
-    my $class = ref $self;
+    my $bitmask = $self->_parse_params(@args);
 
-    return $class->new(@args)->mask == $self->mask ? 1:0;
+    return ($bitmask eq $self->{bitmask}) ? 1:0;
 }
+*hasexact = \&has_exact;
 
-=head3 hasany
+=head3 has_any
 
-    $bm->hasany(ITEMS);
+    if ($bm->has_any(PARAMS)) {
+        # Do something
+    }
 
-This method takes the same arguments as C<new>. Checks if at least one set 
-value matches the supplied value list and returns true or false
+Checks if at least one set value/bit matches the supplied bits/values and 
+returns true or false.
+This method takes the same arguments as C<new>. 
 
 =cut
 
-sub hasany {
+sub has_any {
     my ( $self, @args ) = @_;
 
-    my $class = ref $self;
-
-    return $class->new(@args)->mask & $self->mask ? 1:0;
+    my $bitmask = $self->_parse_params(@args);
+    
+    return (($bitmask & $self->{bitmask}) ne $self->bitmask_empty)  ? 1:0;
 }
+*hasany = \&has_any;
+
 
 =head1 CAVEATS
 
@@ -831,18 +889,17 @@ Since Bitmask::Data is very liberal with input data you cannot use numbers
 as bitmask values. (It would think that you are supplying a bitmask and not
 a value)
 
-Bitmask::Data adds a considerable processing overhead (especially when 
-the bitmask_complex option is enabled) to bitmask manipulations. If you don't
-need the extra comfort please use the perl built in bit operators.
-
-Bitmask length is limited to 32 (respectively 64 on 64-bit perl).
+Bitmask::Data adds a considerable processing overhead to bitmask 
+manipulations. If you don't either don't need the extra comfort or use 
+bitmasks with less that 40 bits that you should consider using just the perl 
+built in bit operators on simple integer values.
 
 =head1 SUBCLASSING
 
 Bitmask::Data was designed to be subclassed.
  
     package MyBitmask;
-    use base qw(Bitmask::Data);
+    use parent qw(Bitmask::Data);
     __PACKAGE__->bitmask_length(20); # Default length is 16
     __PACKAGE__->init(
         'value1' => 0b000000000000000001,
@@ -875,7 +932,7 @@ This module provides three convenient methods to work with databases:
 
 =item * L<sqlfilter_any>: Search for bitmasks with matching bits
 
-=item * L<string>: Print the bitmask string as used by postgres database
+=item * L<string>: Print the bitmask string as used by the database
 
 =back
 
@@ -921,7 +978,7 @@ This module was originally written by Klaus Ita (Koki) for Revdev
 L<http://www.revdev.at>, a nice litte software company I (Maros) run with 
 Koki and Domm (L<http://search.cpan.org/~domm/>).
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT & LICENSE 
 
 Bitmask::Data is Copyright (c) 2008 Klaus Ita, Maroš Kollár 
 - L<http://www.revdev.at>
@@ -933,5 +990,3 @@ The full text of the license can be found in the
 LICENSE file included with this module.
 
 =cut
-
-0b000000000001;
