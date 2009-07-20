@@ -2,7 +2,7 @@
 
 # t/testmask1.t - check testmask 1
 
-use Test::More tests=>57;
+use Test::More tests=>63;
 use Test::NoWarnings;
 
 use strict;
@@ -56,6 +56,8 @@ my @sqlsearch2 = $tm->sqlfilter_any('field');
 is($sqlsearch2[0],"bitand( field, B'1000000000001000' )");
 is(${$sqlsearch2[1]}," = TRUE");
 
+is($tm->sqlstring,"B'1000000000001000'::bit(16)");
+
 $tm->reset;
 is($tm->length,0);
 ok($tm->add(0b1000000000111111));
@@ -79,8 +81,20 @@ is($tm4->first,undef);
 $tm4->add($tm2,Math::BigInt->new('256'));
 is($tm4->first,'value1');
 my $list = $tm4->list();
+my @list = $tm4->list();
+is(scalar @list,3);
 is($tm4->length,3);
 ok('value1' ~~ $list);
 ok('value4' ~~ $list);
 ok('value9' ~~ $list);
 is($tm4->bitmask,"\0\0\0\0\0\0\0\1\0\0\0\0\0\1\0\1");
+
+my $tm5 = Testmask1->new();
+$tm5->add('000000000000000');
+$tm5->add();
+isa_ok($tm5,'Testmask1');
+is($tm5->length,0);
+$tm5->add(undef);
+is($tm5->length,0);
+$tm5->add('000000000000001');
+ok($tm5->has_exact('value1'));

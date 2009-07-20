@@ -80,8 +80,8 @@ Default: undef
 
 =head3 bitmask_lazyinit
 
-Boolean value that enables/disables warnings for lazy initialization. (
-Lazy initialization = call of init without bitmask bit values)
+If true value that disables warnings for lazy initialization. (Lazy 
+initialization = call of init without bitmask bit values).
 
 Default: 0
 
@@ -90,6 +90,17 @@ Default: 0
     'value1', # will be 0b001
     'value2', # will be 0b010
     'value3'  # will be 0b100
+ );
+ 
+If bitmask_lazyinit is 2 then bit values will be filled from left to right, 
+otherwise from right to left
+ 
+ __PACKAGE__->bitmask_lazyinit(2);
+ __PACKAGE__->bitmask_length(6);
+ __PACKAGE__->init(
+    'value1', # will be 0b100000
+    'value2', # will be 0b010000
+    'value3'  # will be 0b001000
  );
 
 =head3 bitmask_items
@@ -188,18 +199,21 @@ use overload
         my ($self,$value) = @_;
         my $bitmask = $self->any2bitmask($value);
         $self->{bitmask} &= $bitmask;
+        $self->{cache} = undef;
         return $self;
     },
     '^='    => sub {
         my ($self,$value) = @_;
         my $bitmask = $self->any2bitmask($value);
         $self->{bitmask} ^= $bitmask;
+        $self->{cache} = undef;
         return $self;
     },
     '|='    => sub {
         my ($self,$value) = @_;
         my $bitmask = $self->any2bitmask($value);
         $self->{bitmask} |= $bitmask;
+        $self->{cache} = undef;
         return $self;
     },  
     "~"     => sub {
@@ -257,7 +271,13 @@ sub init {
                         . " <bitmask_lazyinit> or change init parameters" )
                     unless ( $class->bitmask_lazyinit );
                 $bit = $class->bitmask_empty;
-                substr($bit,($length-$count),1,$ONE);
+                
+                if ($class->bitmask_lazyinit == 2) {
+                    substr($bit,($count-1),1,$ONE);
+                } else {
+                    substr($bit,($length-$count),1,$ONE);
+                }
+                
             }
         }
 
@@ -349,6 +369,7 @@ sub any2bitmask {
     croak "Bitmask, Item or integer expected"
         unless defined $param;
 
+    my $length = $class->bitmask_length;
     my $bit;    
     given ($param) {
         when (blessed $param && $param->isa('Bitmask::Data')) {
@@ -363,8 +384,10 @@ sub any2bitmask {
         when (m/^[$ZERO$ONE]+$/) {
             $bit = $param;
         }
-
-        when (m/^(?:0b)?[01]+$/) {
+        when (m/^[01]{$length}$/) {
+            $bit = $class->string2bit($param);
+        }
+        when (m/^0[bB][01]+$/) {
             $bit = $class->string2bit($param);
         }
         when (m/^\d+$/) {
@@ -416,6 +439,8 @@ sub _parse_params {
 
     return $result_bitmask;
 }
+
+# TODO : method to return ordered bitmask items
 
 =head2 Overloaded operators
 
@@ -610,7 +635,8 @@ Returns the object.
 sub reset {
     my ($self) = @_;
     
-    $self->set($self->bitmask_default || $self->bitmask_empty);
+    $self->{bitmask} = $self->bitmask_default || $self->bitmask_empty;
+    $self->{cache} = undef;
     
     return $self;
 }
@@ -675,11 +701,17 @@ this returns an array reference to the list of values.
 sub list {
     my ($self) = @_;
     
+    return (wantarray ? @{$self->{cache}} : $self->{cache})
+        if defined $self->{cache};
+    
     my @data;
     while (my ($value,$bit) = each %{$self->bitmask_items()}) {
         push @data,$value
             if (($bit & $self->{bitmask}) ne $self->bitmask_empty); 
     }
+    
+    $self->{cache} = \@data;
+    
     return wantarray ? @data : \@data;
 }
 
@@ -821,6 +853,11 @@ sub sqlfilter_any {
     my $sql_mask = $self->string();
     my $format   = "bitand( $field, B'$sql_mask' )";
     return ( $format, \" = TRUE" );
+}
+
+sub sqlstring {
+    my ( $self ) = @_;
+    return sprintf("B'%s'::bit(%i)",$self->string,$self->bitmask_length);
 }
 
 =head3 has_all

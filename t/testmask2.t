@@ -23,3 +23,4 @@ is($tm->string,'101');
 is($tm2->string,'100');
 $tm2->reset();
 is($tm2->string,'101');
+
