@@ -57,7 +57,7 @@ overloaded operators.
 
 Bitmask::Data does not store bitmasks as integers internally, but as 
 strings conststing of \0 and \1, hence makinging unlimited length bitmasks
-possible (perl can handle integer bitmasks only up to 40 bits).
+possible (32-bit perl can handle integer bitmasks only up to 40 bits).
 
 =head1 METHODS
 
@@ -554,7 +554,9 @@ Clones an existing Bitmask::Data object and.
 sub clone {
     my ( $self ) = @_;
     
-    return $self->new_from_bitmask($self->{bitmask});
+    my $new = $self->new_from_bitmask($self->{bitmask});
+    $new->{cache} = $self->{cache};
+    return $new;
 }
 
 =head3 set
