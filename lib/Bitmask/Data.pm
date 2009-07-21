@@ -65,8 +65,8 @@ possible (32-bit perl can handle integer bitmasks only up to 40 bits).
 
 =head3 bitmask_length
 
-Set/Get the length of the bitmask. Changing this value after the 
-initialization is not recommended.
+Set/Get the length of the bitmask. Do not change this value after the 
+initialization.
 
 Bitmask length is unlimited.
 
@@ -141,7 +141,7 @@ With C<bitmask_lazyinit> enabled you can also skip the bitmask bit values
     );
 
 Bits may be supplied as integers, strings or Math::BigInt objects 
-(not recommended) strings
+(not recommended).
 
     CLASS->init(
         'value1' => 0b000001,               # integer
@@ -766,8 +766,6 @@ sub integer {
     
     my $bitmask = $self->{bitmask};
     $bitmask =~ tr/\0\1/01/;
-    
-    say('AS INTEGER');
     
     if ($self->bitmask_length > 40) {
         require Math::BigInt;
