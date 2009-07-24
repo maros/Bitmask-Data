@@ -1,5 +1,8 @@
 Revision history for Perl module Bitmask::Data
 
+2.01 Fri Jul 24 2009
+    - Update dependencies
+
 2.00 Tue Jul 21 2009
     - ATTENTION: bitmask_complex option is not supported anymore
     - Complete rewrite using strings with "\0" and "\1" as internal data format

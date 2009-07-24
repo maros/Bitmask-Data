@@ -14,6 +14,7 @@ requires        'List::Util'                => 0;
 requires        'Scalar::Util'              => 0;
 requires        'Class::Data::Inheritable'  => 0;
 requires        'Math::BigInt'              => 0;
+requires        'parent'                    => 0;
 
 build_requires  'Test::More'                => 0;
 build_requires  'Test::Warn'                => 0;
