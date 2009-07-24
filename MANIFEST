@@ -18,12 +18,14 @@ t/exceptions.t
 t/lib/Testmask1.pm
 t/lib/Testmask2.pm
 t/lib/Testmask3.pm
+t/lib/Testmask4.pm
 t/lib/Testmask5.pm
 t/lib/Testmask6.pm
 t/overload.t
 t/testmask1.t
 t/testmask2.t
 t/testmask3.t
+t/testmask4.t
 t/testmask_long.t
 xt/perlcritic.t
 xt/pod.t
