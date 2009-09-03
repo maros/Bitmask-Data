@@ -262,18 +262,17 @@ sub init {
             if $count > $class->bitmask_length;
 
         given ( $params[0] // '' ) {
-            when (ref $_ eq 'Math::BigInt') {
+            when (blessed $_ && $_->isa('Math::BigInt')) {
                 $bit = $class->string2bit(shift(@params)->as_bin());
             }
             when (m/^\d+$/) {
                 $bit = $class->int2bit(shift(@params));
             }
-            when (m/^(?:0[bB])?[01]+$/) {
+            when (m/^0[bB][01]+$/) {
                 $bit = $class->string2bit(shift(@params));
             }
             when (m/^[$ZERO$ONE]+$/) {
-                $bit = shift(@params);
-                $bit = $ZERO x ($length - length($bit)) . $bit;
+                $bit = $class->bit2bit(shift(@params));
             }
             default {
                 carp( "Lazy bitmask initialization detected: Please enable"
@@ -324,9 +323,9 @@ Helper method that turns an integer into the internal bitmask representation
 sub int2bit {
     my ($class,$integer) = @_;
     
-    my $bitmask = sprintf( '%0' . $class->bitmask_length . 'b', $integer );
-    $bitmask =~ tr/01/\0\1/;
-    return $bitmask;
+    my $bit = sprintf( '%0' . $class->bitmask_length . 'b', $integer );
+    $bit =~ tr/01/\0\1/;
+    return $bit;
 }
 
 =head3 string2bit
@@ -345,6 +344,13 @@ sub string2bit {
     $string = sprintf( '%0' . $class->bitmask_length . 's', $string );
     $string =~ tr/01/\0\1/;
     return $string;
+}
+
+sub bit2bit {
+    my ($class,$bit) = @_;
+    
+    $bit = $ZERO x ($class->bitmask_length - length($bit)) . $bit;
+    return $bit;
 }
 
 =head3 any2bitmask
@@ -382,7 +388,7 @@ sub any2bitmask {
     my $bit;    
     given ($param) {
         when (blessed $param && $param->isa('Bitmask::Data')) {
-            $bit = $param->{bitmask};
+            $bit = $class->bit2bit($param->{bitmask});
         }
         when (blessed $param && $param->isa('Math::BigInt')) {
             $bit = $class->string2bit($param->as_bin());
@@ -391,7 +397,7 @@ sub any2bitmask {
             $bit = $class->bitmask_items->{$param};
         }
         when (m/^[$ZERO$ONE]+$/) {
-            $bit = $param;
+            $bit = $class->bit2bit($param);
         }
         when (m/^[01]{$length}$/) {
             $bit = $class->string2bit($param);
@@ -702,7 +708,7 @@ sub neg {
     my ( $self ) = @_;
 
     $self->{bitmask} =~ tr/\0\1/\1\0/;
-    $self->{bitmask} = $self->{bitmask} & $self->bitmask_full();
+    $self->{bitmask} = $self->{bitmask} & $self->bitmask_full;
     $self->{cache} = undef;
     
     return $self;
