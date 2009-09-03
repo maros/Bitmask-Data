@@ -231,11 +231,11 @@ sub _equals {
 }
     
 sub _compare {
-    my ($self,$value,$order) = @_;
+    my ($self,$value) = @_;
+
     my $bitmask = $self->any2bitmask($value);
-    return ($order) ? 
-        $self->{bitmask} cmp $bitmask :
-        $bitmask cmp $self->{bitmask};
+    
+    return $self->{bitmask} cmp $bitmask;
 }
 
 sub init {
