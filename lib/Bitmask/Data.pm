@@ -679,20 +679,15 @@ Returns the object.
 
 =cut
 
-sub setall {
+sub set_all {
     my ($self) = @_;
     
-    my $bitmask = $self->bitmask_empty;
-    
-    foreach my $bit (values %{$self->bitmask_items()}) {
-        $bitmask = $bitmask | $bit;
-    }
-    $self->{bitmask} = $bitmask;
+    $self->{bitmask} = $self->bitmask_full;
     $self->{cache} = undef;
     
     return $self;
 }
-
+*setall = \&set_all;
 
 =head3 neg 
 
