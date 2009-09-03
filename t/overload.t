@@ -2,7 +2,7 @@
 
 # t/overload.t - overload params
 
-use Test::More tests => 19;
+use Test::More tests => 29;
 use Test::NoWarnings;
 
 use strict;
@@ -60,6 +60,20 @@ is($tm6->string,'11001','Bitmask has been updated correctly');
 
 my $tm9 = ~ $tm6;
 is($tm9->string,'00110','New bitmask is correct');
+
+my $tm10 = Testmask5->new('value2');;
+ok($tm10 == 'value2','Comparison works');
+
+ok(scalar($tm10->list) ~~ ['value2'],'List smartmatch');
+ok($tm10 ~~ ['value2'],'Overload smartmatch');
+ok($tm10 ~~ ['value2'],'Overload smartmatch single');
+ok($tm10 ~~ ['value2','value3'],'Overload smartmatch multiple');
+$tm10->add('value3');
+ok($tm10 ~~ $tm10->clone,'Overload smartmatch object');
+ok($tm10 ~~ '00110','Overload smartmatch string');
+ok($tm10 ~~ 6,'Overload smartmatch integer');
+ok(($tm10 ~~ ['value3','value4']),'Overload smartmatch partial');
+ok(! ($tm10 ~~ ['value5','value4']),'Overload no match');
 
 
 #ok(Testmask5->new('value1') == 1);
