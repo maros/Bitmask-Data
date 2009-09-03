@@ -2,7 +2,7 @@
 
 # t/overload.t - overload params
 
-use Test::More tests => 29;
+use Test::More tests => 35;
 use Test::NoWarnings;
 
 use strict;
@@ -61,7 +61,7 @@ is($tm6->string,'11001','Bitmask has been updated correctly');
 my $tm9 = ~ $tm6;
 is($tm9->string,'00110','New bitmask is correct');
 
-my $tm10 = Testmask5->new('value2');;
+my $tm10 = Testmask5->new('value2');
 ok($tm10 == 'value2','Comparison works');
 
 ok(scalar($tm10->list) ~~ ['value2'],'List smartmatch');
@@ -75,6 +75,17 @@ ok($tm10 ~~ 6,'Overload smartmatch integer');
 ok(($tm10 ~~ ['value3','value4']),'Overload smartmatch partial');
 ok(! ($tm10 ~~ ['value5','value4']),'Overload no match');
 
+my $tm11 = Testmask5->new('value1');
+my $tm12 = Testmask5->new('value2');
+my $tm13 = Testmask5->new('value3');
+my $tm14 = Testmask5->new('value1');
+
+ok(($tm11 < $tm12),'Compare works');
+ok(($tm13 > $tm12),'Compare works');
+ok(($tm11 >= $tm14),'Compare works');
+is(($tm11 cmp $tm14),0,'Compare works');
+is(($tm11 cmp $tm12),-1,'Compare works');
+is(($tm12 cmp $tm11),1,'Compare works');
 
 #ok(Testmask5->new('value1') == 1);
 #ok(Testmask5->new('value1') != 2);

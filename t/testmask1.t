@@ -2,7 +2,7 @@
 
 # t/testmask1.t - check testmask 1
 
-use Test::More tests=>63;
+use Test::More tests=>68;
 use Test::NoWarnings;
 
 use strict;
@@ -80,13 +80,18 @@ my $tm4 = Testmask1->new();
 is($tm4->first,undef);
 $tm4->add($tm2,Math::BigInt->new('256'));
 is($tm4->first,'value1');
-my $list = $tm4->list();
-my @list = $tm4->list();
-is(scalar @list,3);
+my $list1 = $tm4->list();
+my @list1 = $tm4->list();
+isa_ok($list1,'ARRAY');
+is(scalar @list1,3);
 is($tm4->length,3);
-ok('value1' ~~ $list);
-ok('value4' ~~ $list);
-ok('value9' ~~ $list);
+my $list2 = $tm4->list();
+my @list2 = $tm4->list();
+isa_ok($list2,'ARRAY');
+is(scalar @list2,3);
+ok('value1' ~~ $list2);
+ok('value4' ~~ $list2);
+ok('value9' ~~ $list2);
 is($tm4->bitmask,"\0\0\0\0\0\0\0\1\0\0\0\0\0\1\0\1");
 
 my $tm5 = Testmask1->new();
@@ -98,3 +103,6 @@ $tm5->add(undef);
 is($tm5->length,0);
 $tm5->add('000000000000001');
 ok($tm5->has_exact('value1'));
+is($tm5->length,1);
+$tm5->reset;
+is($tm5->length,0);
