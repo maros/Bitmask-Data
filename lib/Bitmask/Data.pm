@@ -158,14 +158,21 @@ __PACKAGE__->mk_classdata( bitmask_empty    => undef );
 __PACKAGE__->mk_classdata( bitmask_full     => undef );
 
 use overload 
+    '<=>'   => '_compare',
+    'cmp'   => '_compare',
+    '=='    => '_equals',
+    'eq'    => '_equals',
+    '~~'    => sub {
+        my ($self,$value) = @_; 
+        my $bitmask = $self->any2bitmask($value);
+        return (($bitmask & $self->{bitmask}) ne $self->bitmask_empty)  ? 1:0;
+    },
     'bool'  => sub {
          my ($self) = @_; 
          return ($self->{bitmask} ne $self->bitmask_empty) ? 1:0;
     },
     '0+'    => 'integer',
     '""'    => 'string',
-    '<=>'   => '_compare',
-    'cmp'   => '_compare',
     '+='    => 'add',
     '-='    => 'remove',
     '+'     => sub {
@@ -216,6 +223,12 @@ use overload
         my ($self) = @_;
         return $self->clone->neg();
     };
+    
+sub _equals {
+    my ($self,$value) = @_;
+    my $bitmask = $self->any2bitmask($value);
+    return ($self->{bitmask} eq $bitmask);
+}
     
 sub _compare {
     my ($self,$value,$order) = @_;
