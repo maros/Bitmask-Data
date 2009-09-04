@@ -11,7 +11,7 @@ use Carp;
 use List::Util qw(reduce);
 use Scalar::Util qw(blessed);
 
-our $VERSION = version->new('2.01');
+our $VERSION = version->new('2.02');
 our $AUTHORITY = 'cpan:MAROS';
 
 our $ZERO = chr(0);

@@ -1,5 +1,12 @@
 Revision history for Perl module Bitmask::Data
 
+2.02 Fri Sep 4 2009
+    - Extend tests to reach 98.7% test coverage
+    - Overload smartmatch operator
+    - Renamed setall -> set_all; Simplified set_all method
+    - Better handling of bit params
+    - Documentation: Fixed typos, extended
+
 2.01 Fri Jul 24 2009
     - Update dependencies
 
