@@ -54,7 +54,7 @@ is(${$sqlsearch1[1]}," = B'1000000000001000'");
 
 my @sqlsearch2 = $tm->sqlfilter_any('field');
 is($sqlsearch2[0],"bitand( field, B'1000000000001000' )");
-is(${$sqlsearch2[1]}," = TRUE");
+is(${$sqlsearch2[1]}," <> B'0000000000000000'");
 
 is($tm->sqlstring,"B'1000000000001000'::bit(16)");
 

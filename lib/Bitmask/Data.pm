@@ -872,7 +872,9 @@ sub sqlfilter_any {
 
     my $sql_mask = $self->string();
     my $format   = "bitand( $field, B'$sql_mask' )";
-    return ( $format, \" = TRUE" );
+    my $empty_mask = $self->bitmask_empty;
+    $empty_mask =~ tr/\0\1/01/;
+    return ( $format, \" <> B'$empty_mask'" );
 }
 
 =head3 sqlstring
