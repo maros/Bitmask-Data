@@ -8,10 +8,11 @@ use base qw(Class::Data::Inheritable);
 use 5.010;
 
 use Carp;
+use Config;
 use List::Util qw(reduce);
 use Scalar::Util qw(blessed);
 
-our $VERSION = version->new('2.02');
+our $VERSION = version->new('2.03');
 our $AUTHORITY = 'cpan:MAROS';
 
 our $ZERO = chr(0);
@@ -787,10 +788,11 @@ sub integer {
     my $bitmask = $self->{bitmask};
     $bitmask =~ tr/\0\1/01/;
     
-    if ($self->bitmask_length > 40) {
+    if ($self->bitmask_length > 64 || ($self->bitmask_length > 40  && ! $Config{use64bitint})) {
         require Math::BigInt;
         return Math::BigInt->from_bin("0b".$bitmask);
     } else {
+        no warnings 'portable';
         return oct("0b".$bitmask);
     }
 }
@@ -952,6 +954,7 @@ sub has_any {
 }
 *hasany = \&has_any;
 
+1;
 
 =head1 CAVEATS
 
