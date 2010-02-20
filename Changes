@@ -1,5 +1,13 @@
 Revision history for Perl module Bitmask::Data
 
+2.03 Sat Feb 20 2010
+    - Fix error in sqlfilter_any
+    - Better behavior on 64-bit perl
+    - Add/extend tests for long bitmasks
+    - Remove caching
+    - Use parent instead of base
+    - Update makefile and require at least perl 5.10.1
+
 2.02 Fri Sep 4 2009
     - Extend tests to reach 98.7% test coverage
     - Overload smartmatch operator
