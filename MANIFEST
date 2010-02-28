@@ -21,6 +21,8 @@ t/lib/Testmask3.pm
 t/lib/Testmask4.pm
 t/lib/Testmask5.pm
 t/lib/Testmask6.pm
+t/lib/Testmask7.pm
+t/maxinteger.t
 t/overload.t
 t/testmask1.t
 t/testmask2.t

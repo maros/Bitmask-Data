@@ -1,5 +1,8 @@
 Revision history for Perl module Bitmask::Data
 
+2.04 Sun Feb 28 2010
+    - Fix failing tests on 32-bit perl
+
 2.03 Sat Feb 20 2010
     - Fix error in sqlfilter_any
     - Better behavior on 64-bit perl
