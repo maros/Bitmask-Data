@@ -788,7 +788,7 @@ sub integer {
     my $bitmask = $self->{bitmask};
     $bitmask =~ tr/\0\1/01/;
     
-    if ($self->bitmask_length > 64 || ($self->bitmask_length > 40  && ! $Config{use64bitint})) {
+    if ($self->bitmask_length > 64 || ($self->bitmask_length > 32 && ! $Config{use64bitint})) {
         require Math::BigInt;
         return Math::BigInt->from_bin("0b".$bitmask);
     } else {
