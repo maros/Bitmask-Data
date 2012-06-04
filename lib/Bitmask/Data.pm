@@ -482,7 +482,7 @@ Works like 'has_any'
 
 Works like L<has_any>.
 
- $bm = new Somebitmask->new('v1','v2');
+ $bm = Somebitmask->new('v1','v2');
  $bm ~~ ['v1','v3'] # true, because 'v1' matches even if 'v3' is not set
 
 =item * +, -
@@ -573,7 +573,7 @@ sub new_from_bitmask {
 
     my $bm_new = $bm->clone();
 
-Clones an existing Bitmask::Data object and.
+Clones an existing Bitmask::Data object and returns it.
 
 =cut
 
@@ -589,7 +589,7 @@ sub clone {
 
     $bm->set(PARAMS);
     
-This methpd resets the current bitmask and sets the supplied arguments. 
+This method resets the current bitmask and sets the supplied arguments. 
 Takes the same arguments as C<new>. 
 
 Returns the object.
