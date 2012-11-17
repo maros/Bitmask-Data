@@ -1043,7 +1043,7 @@ on your report as I make changes.
     CPAN ID: MAROS
     maros [at] k-1.com
     
-    L<http://www.revdev.at>
+    L<http://www.k-1.com>
 
 =head1 ACKNOWLEDGEMENTS 
 
