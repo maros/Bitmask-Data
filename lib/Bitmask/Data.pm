@@ -3,6 +3,7 @@ package Bitmask::Data;
 # ============================================================================
 use strict;
 use warnings;
+no if $] >= 5.017004, warnings => qw(experimental::smartmatch);
 
 use parent qw(Class::Data::Inheritable);
 use 5.010;

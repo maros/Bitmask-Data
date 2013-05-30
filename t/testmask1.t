@@ -4,6 +4,7 @@
 
 use Test::More tests=>68;
 use Test::NoWarnings;
+no if $] >= 5.017004, warnings => qw(experimental::smartmatch);
 
 use strict;
 use warnings;
