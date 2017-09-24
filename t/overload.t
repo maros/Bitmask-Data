@@ -4,10 +4,10 @@
 
 use Test::More tests => 35;
 use Test::NoWarnings;
-no if $] >= 5.017004, warnings => qw(experimental::smartmatch);
 
 use strict;
 use warnings;
+no if $] >= 5.017004, warnings => qw(experimental::smartmatch);
 
 use lib qw(t/lib);
 use_ok( 'Testmask5' );
