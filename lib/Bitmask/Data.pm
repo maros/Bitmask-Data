@@ -13,7 +13,7 @@ use Config;
 use List::Util qw(reduce);
 use Scalar::Util qw(blessed);
 
-our $VERSION = version->new('2.04');
+our $VERSION = version->new('2.05');
 our $AUTHORITY = 'cpan:MAROS';
 
 our $ZERO = chr(0);

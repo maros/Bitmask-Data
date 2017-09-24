@@ -46,3 +46,5 @@ Bitmask-Data-*.*.tar.gz
 \B\.DS_Store
 #   Mac OSX SMB mount metadata files
 \B\._
+
+MYMETA.*
